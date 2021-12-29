@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Mobina Explorer</string>
+
+    <string name="notif_channel">Explorer</string>
+    <string name="notif_channel_desc">Explores for Mobina</string>
+    <string name="notif_title">Exploring for Mobina&#8230;</string>
+    <string name="notif_stop">Stop</string>
+    <string-array name="bytes">
+        <item>bytes</item>
+        <item>kilobytes</item>
+        <item>megabytes</item>
+        <item>gigabytes</item>
+    </string-array>
+</resources>

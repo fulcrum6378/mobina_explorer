@@ -1,0 +1,16 @@
+<resources>
+
+    <style name="Theme.MobinaExplorer" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/CP</item>
+        <item name="colorPrimaryVariant">@color/CPV</item>
+        <item name="colorOnPrimary">@color/CPO</item>
+        <item name="colorSecondary">@color/CS</item>
+        <item name="colorSecondaryVariant">@color/CSV</item>
+        <item name="colorOnSecondary">@color/CSO</item>
+        <item name="android:statusBarColor">?attr/colorSecondary</item>
+        <item name="android:windowBackground">?attr/colorSecondary</item>
+        <item name="android:navigationBarColor">?attr/colorSecondary</item>
+        <item name="android:windowLightStatusBar">?attr/isLightTheme</item>
+        <item name="android:windowLightNavigationBar">?attr/isLightTheme</item>
+    </style>
+</resources>

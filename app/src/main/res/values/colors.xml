@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="CP">#7B56C0</color>
+    <color name="CPV">#5731ad</color>
+    <color name="CPO">#777B56C0</color>
+    <color name="CS">#F9F9F9</color>
+    <color name="CSV">#FFF</color>
+    <color name="CSO">#55F9F9F9</color>
+</resources>
