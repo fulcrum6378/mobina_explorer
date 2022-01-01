@@ -12,9 +12,7 @@ import ir.mahdiparastesh.mobinaexplorer.json.Rest
 import ir.mahdiparastesh.mobinaexplorer.json.Search
 import ir.mahdiparastesh.mobinaexplorer.room.Nominee
 
-class Analyzer(
-    private val c: Explorer, user: String, val step: Int, carryOn: Boolean = false
-) {
+class Analyzer(private val c: Explorer, user: String, val step: Int) {
     private lateinit var u: User
     private lateinit var timeline: TimelineMedia
     private val allPosts = arrayListOf<EdgePost>()
@@ -24,11 +22,11 @@ class Analyzer(
             ?.sendToTarget()
         Fetcher(c, Type.PROFILE.url.format(user)) { html ->
             // Human Simulation Games
-            Fetcher(c, Type.HUMAN_CSS1.url, true) {}
+            /*Fetcher(c, Type.HUMAN_CSS1.url, true) {}
             Fetcher(c, Type.HUMAN_CSS2.url, true) {}
             Fetcher(c, Type.HUMAN_CSS3.url, true) {}
             Fetcher(c, Type.HUMAN_CSS4.url, true) {}
-            Fetcher(c, Type.HUMAN_CSS5.url, true) {}
+            Fetcher(c, Type.HUMAN_CSS5.url, true) {}*/
 
             val cnf = html.substringAfter(preConfig).substringBefore(posConfig)
             try {
@@ -49,6 +47,8 @@ class Analyzer(
             // TODO: ANALYZE PROFILE PHOTO
             // IF DIDN'T FIND ANYTHING: TODO(resumePosts())
             //if (step <= 10) allFollow(Type.FOLLOWERS, mutableListOf())
+
+            handler.obtainMessage(handler.ANALYZED).sendToTarget()
         }
     }
 
@@ -60,8 +60,8 @@ class Analyzer(
         @Suppress("UNCHECKED_CAST")
         override fun handleMessage(msg: Message) {
             when (msg.what) {
-                ANALYZED -> {
-                }
+                ANALYZED -> c.crawler.carryOn() // TODO: Change later
+
                 FOLLOWERS, FOLLOWING -> (msg.obj as List<Rest.User>).forEach {
                     c.crawler.dao.addNominee(
                         Nominee(
@@ -73,7 +73,7 @@ class Analyzer(
                 }
             }
             if (msg.what == FOLLOWERS) allFollow(Type.FOLLOWING, mutableListOf())
-            if (msg.what == FOLLOWING && carryOn) c.crawler.carryOn()
+            if (msg.what == FOLLOWING) c.crawler.carryOn()
         }
     }
 

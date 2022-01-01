@@ -1,5 +1,8 @@
 package ir.mahdiparastesh.mobinaexplorer
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ObjectAnimator
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -16,6 +19,7 @@ import java.lang.StringBuilder
 class Panel : AppCompatActivity() {
     private lateinit var c: Context
     private lateinit var b: MainBinding
+    private var anStatus: ObjectAnimator? = null
 
     companion object {
         var handler: Handler? = null
@@ -32,7 +36,22 @@ class Panel : AppCompatActivity() {
             override fun handleMessage(msg: Message) {
                 when (msg.what) {
                     Action.BYTES.ordinal -> b.bytes.text = bytes(Crawler.bytesSinceBoot())
-                    Action.STATUS.ordinal -> b.status.text = msg.obj as String
+                    Action.STATUS.ordinal -> {
+                        b.status.text = msg.obj as String
+                        b.status.setTextColor(Fun.color(c, R.color.alarm))
+                        anStatus = ObjectAnimator.ofArgb(
+                            b.status, "textColor",
+                            Fun.color(c, R.color.alarm), Fun.color(c, R.color.CPO)
+                        ).apply {
+                            duration = 1000L
+                            addListener(object : AnimatorListenerAdapter() {
+                                override fun onAnimationEnd(animation: Animator?) {
+                                    anStatus = null
+                                }
+                            })
+                            start()
+                        }
+                    }
                 } // GsonBuilder().setPrettyPrinting().create()
             }
         }

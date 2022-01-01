@@ -59,6 +59,7 @@ class Explorer : Service() {
 
         handler = object : Handler(Looper.getMainLooper()) {
             override fun handleMessage(msg: Message) {
+                //when (msg.what) { }
             }
         }
         crawler = Crawler(this).also { it.start() }
@@ -93,4 +94,6 @@ class Explorer : Service() {
     }
 
     enum class Code { CHANNEL, RESUME, PAUSE, STOP }
+
+    //enum class Action { }
 }

@@ -26,14 +26,13 @@ class Crawler(private val c: Explorer) : Thread() {
         val preNoms = dao.nominees()
         if (preNoms.isEmpty() || preNoms.all { it.anal })
             Analyzer.search(c, expKeywords.random())
-        else preNoms.filter { !it.anal }.forEachIndexed { i, nom ->
-            Analyzer(c, nom.user, nom.step + 1, i == preNoms.size - 1)
-        }
+        else preNoms.filter { !it.anal } /**/ .random()
+            .apply { Analyzer(c, user, step + 1) }
     }
 
     companion object {
         val impKeywords = arrayOf(
-             "rasht", "resht", "gilan", "رشت", "گیلان", "1379", "79", "2000"
+            "rasht", "resht", "gilan", "رشت", "گیلان", "1379", "79", "2000"
         )
         val expKeywords = arrayOf("mobina", "مبینا")
 
