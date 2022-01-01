@@ -46,6 +46,20 @@
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />-->
 
     <TextView
+        android:id="@+id/status"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:textAlignment="center"
+        android:textColor="@color/CPO"
+        android:textIsSelectable="true"
+        android:textSize="13sp"
+        app:layout_constraintBottom_toTopOf="@id/bytes"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/explore"
+        app:layout_constraintWidth_percent="0.85" />
+
+    <TextView
         android:id="@+id/bytes"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

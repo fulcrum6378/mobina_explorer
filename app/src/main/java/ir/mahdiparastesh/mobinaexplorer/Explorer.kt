@@ -14,28 +14,25 @@ import android.os.Message
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.MutableLiveData
 
+@SuppressLint("UnspecifiedImmutableFlag")
 class Explorer : Service() {
     private lateinit var c: Context
     lateinit var crawler: Crawler
     var handler: Handler? = null
 
-    companion object {
-        const val CH_ID = 103
-        val CHANNEL = Explorer::class.java.`package`!!.name + ".EXPLORING"
-        val ACTION_STOP = Explorer::class.java.`package`!!.name + ".ACTION_STOP"
-        val active = MutableLiveData(false)
-    }
-
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        if (intent?.action != null && intent.action.equals(ACTION_STOP, ignoreCase = true)) {
-            stopForeground(true)
-            stopSelf()
+        if (intent?.action != null) when (intent.action) {
+            code(Code.RESUME) -> crawler.running = true
+            code(Code.PAUSE) -> crawler.running = false
+            code(Code.STOP) -> {
+                stopForeground(true)
+                stopSelf()
+            }
         }
         return START_NOT_STICKY
     }
 
-    @SuppressLint("UnspecifiedImmutableFlag")
     override fun onCreate() {
         super.onCreate()
         active.value = true
@@ -44,10 +41,10 @@ class Explorer : Service() {
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
             .createNotificationChannel(
                 NotificationChannel(
-                    CHANNEL, c.resources.getString(R.string.notif_channel),
+                    code(Code.CHANNEL), c.resources.getString(R.string.notif_channel),
                     NotificationManager.IMPORTANCE_HIGH
                 ).apply { description = c.resources.getString(R.string.notif_channel_desc) })
-        startForeground(CH_ID, NotificationCompat.Builder(c, CHANNEL).apply {
+        startForeground(CH_ID, NotificationCompat.Builder(c, code(Code.CHANNEL)).apply {
             setSmallIcon(R.mipmap.launcher_round)
             setContentTitle(c.resources.getString(R.string.notif_title))
             setOngoing(true)
@@ -57,12 +54,7 @@ class Explorer : Service() {
                     c, 0, Intent(c, Panel::class.java), PendingIntent.FLAG_UPDATE_CURRENT
                 )
             )
-            addAction(
-                0, c.resources.getString(R.string.notif_stop), PendingIntent.getService(
-                    c, 0, Intent(c, Explorer::class.java).apply { action = ACTION_STOP },
-                    PendingIntent.FLAG_CANCEL_CURRENT
-                )
-            )
+            addAction(0, c.resources.getString(R.string.notif_stop), pi(c, Code.STOP))
         }.build())
 
         handler = object : Handler(Looper.getMainLooper()) {
@@ -81,4 +73,24 @@ class Explorer : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+
+    companion object {
+        const val CH_ID = 103
+        val active = MutableLiveData(false)
+
+        fun code(what: Code) = Explorer::class.java.`package`!!.name + "." + when (what) {
+            Code.CHANNEL -> "EXPLORING"
+            Code.RESUME -> "ACTION_RESUME"
+            Code.PAUSE -> "ACTION_PAUSE"
+            Code.STOP -> "ACTION_STOP"
+        }
+
+        fun pi(c: Context, code: Code): PendingIntent = PendingIntent.getService(
+            c, 0, Intent(c, Explorer::class.java).apply { action = code(code) },
+            PendingIntent.FLAG_CANCEL_CURRENT
+        )
+    }
+
+    enum class Code { CHANNEL, RESUME, PAUSE, STOP }
 }

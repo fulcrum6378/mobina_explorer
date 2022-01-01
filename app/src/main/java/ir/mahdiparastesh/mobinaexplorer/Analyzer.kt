@@ -18,6 +18,40 @@ class Analyzer(
     private lateinit var u: User
     private lateinit var timeline: TimelineMedia
     private val allPosts = arrayListOf<EdgePost>()
+
+    init {
+        Panel.handler?.obtainMessage(Panel.Action.STATUS.ordinal, "Analyzing $user")
+            ?.sendToTarget()
+        Fetcher(c, Type.PROFILE.url.format(user)) { html ->
+            // Human Simulation Games
+            Fetcher(c, Type.HUMAN_CSS1.url, true) {}
+            Fetcher(c, Type.HUMAN_CSS2.url, true) {}
+            Fetcher(c, Type.HUMAN_CSS3.url, true) {}
+            Fetcher(c, Type.HUMAN_CSS4.url, true) {}
+            Fetcher(c, Type.HUMAN_CSS5.url, true) {}
+
+            val cnf = html.substringAfter(preConfig).substringBefore(posConfig)
+            try {
+                u = Gson().fromJson(cnf, PageConfig::class.java).entry_data
+                    .ProfilePage[0].graphql.user
+            } catch (ignored: Exception) {
+                // TODO: Not Signed In
+                return@Fetcher
+            }
+            timeline = u.edge_owner_to_timeline_media!!
+            allPosts.addAll(timeline.edges)
+
+            if (u.profile_pic_url_hd != null) {
+            } else if (u.profile_pic_url != null) {
+            } else {
+            }
+
+            // TODO: ANALYZE PROFILE PHOTO
+            // IF DIDN'T FIND ANYTHING: TODO(resumePosts())
+            //if (step <= 10) allFollow(Type.FOLLOWERS, mutableListOf())
+        }
+    }
+
     private val handler = object : Handler(Looper.getMainLooper()) {
         val ANALYZED = 0
         val FOLLOWERS = 1
@@ -43,30 +77,7 @@ class Analyzer(
         }
     }
 
-    init {
-        Fetcher(c, Type.PROFILE.url.format(user)) { cnf ->
-            val config = cnf.substringAfter(preConfig).substringBefore(posConfig)
-            u = Gson().fromJson(config, PageConfig::class.java).entry_data
-                .ProfilePage[0].graphql.user
-            timeline = u.edge_owner_to_timeline_media!!
-            allPosts.addAll(timeline.edges)
-
-            if (u.profile_pic_url_hd != null) {
-            } else if (u.profile_pic_url != null) {
-            } else {
-            }
-
-            // TODO: ANALYZE PROFILE PHOTO
-            // IF DIDN'T FIND ANYTHING: TODO(resumePosts())
-            //if (step <= 10) allFollow(Type.FOLLOWERS, mutableListOf())
-        }
-    }
-
     private fun resumePosts() {
-        /*val libAddress = cnf.substringAfter(preLib).substringBefore(posLib)
-        Fetcher(c, Type.LIBRARY.url.format(libAddress)) { lib ->
-            libHash = lib.substringAfter(preHash).substringAfter(posHash)
-        }*/
         if (!timeline.page_info.has_next_page)
             Panel.handler?.obtainMessage(1, allPosts)?.sendToTarget()
         else object : Fetcher.Delayer() {

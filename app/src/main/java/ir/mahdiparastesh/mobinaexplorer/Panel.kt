@@ -31,18 +31,20 @@ class Panel : AppCompatActivity() {
         handler = object : Handler(Looper.getMainLooper()) {
             override fun handleMessage(msg: Message) {
                 when (msg.what) {
-                    Handle.BYTES.ordinal -> b.bytes.text = bytes(Crawler.bytesSinceBoot())
+                    Action.BYTES.ordinal -> b.bytes.text = bytes(Crawler.bytesSinceBoot())
+                    Action.STATUS.ordinal -> b.status.text = msg.obj as String
                 } // GsonBuilder().setPrettyPrinting().create()
             }
         }
-        handler?.obtainMessage(Handle.BYTES.ordinal)?.sendToTarget()
+        handler?.obtainMessage(Action.BYTES.ordinal)?.sendToTarget()
 
         // Foreground Service
         Explorer.active.observe(this) { b -> exploring(b) }
         exploring(Explorer.active.value == true)
         b.root.setOnClickListener {
-            startService(Intent(this, Explorer::class.java)
-                .apply { if (Explorer.active.value == true) action = Explorer.ACTION_STOP })
+            startService(Intent(this, Explorer::class.java).apply {
+                if (Explorer.active.value == true) action = Explorer.code(Explorer.Code.STOP)
+            })
         }
 
         // b.users.adapter = ListUser(data, this@Panel)
@@ -55,6 +57,7 @@ class Panel : AppCompatActivity() {
 
     private fun exploring(bb: Boolean) {
         b.explore.alpha = if (bb) 1f else .36f
+        vis(b.status, bb)
     }
 
     @Suppress("unused")
@@ -88,5 +91,5 @@ class Panel : AppCompatActivity() {
         }.toString()
     }
 
-    enum class Handle { BYTES }
+    enum class Action { BYTES, STATUS }
 }
