@@ -43,7 +43,7 @@ class GraphQL(val user: User) {
         val is_professional_account: Boolean?,
         val is_verified: Boolean?,
         val overall_category_name: Any?,
-        val profile_pic_url: Any?,
+        val profile_pic_url: String?,
         val profile_pic_url_hd: String?,
         val pronouns: Array<Any>?,
         val requested_by_viewer: Boolean?,

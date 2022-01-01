@@ -1,7 +1,10 @@
 package ir.mahdiparastesh.mobinaexplorer.room
 
+import android.annotation.SuppressLint
 import androidx.room.*
 import androidx.room.Database
+import ir.mahdiparastesh.mobinaexplorer.Explorer
+import java.io.File
 
 @Database(
     entities = [Nominee::class, Session::class],
@@ -30,5 +33,21 @@ abstract class Database : RoomDatabase() {
 
         @Insert(onConflict = OnConflictStrategy.REPLACE)
         fun addNominee(item: Nominee)
+
+        @Update
+        fun updateNominee(item: Nominee)
+    }
+
+    @SuppressLint("SdCardPath")
+    class DbFile(which: Triple) : File(
+        "/data/data/" + Explorer::class.java.`package`!!.name + "/databases/" + DATABASE + which.s
+    ) {
+        companion object {
+            const val DATABASE = "primary.db"
+        }
+
+        enum class Triple(val s: String) {
+            MAIN(""), SHARED_MEMORY("-shm"), WRITE_AHEAD_LOG("-wal")
+        }
     }
 }

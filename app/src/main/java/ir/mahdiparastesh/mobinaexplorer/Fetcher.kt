@@ -3,10 +3,8 @@ package ir.mahdiparastesh.mobinaexplorer
 import android.net.Uri
 import android.os.CountDownTimer
 import android.text.TextUtils
-import com.android.volley.DefaultRetryPolicy
-import com.android.volley.Response
-import com.android.volley.VolleyError
-import com.android.volley.toolbox.StringRequest
+import com.android.volley.*
+import com.android.volley.toolbox.HttpHeaderParser
 import com.android.volley.toolbox.Volley
 import com.google.gson.Gson
 import com.google.gson.stream.JsonReader
@@ -16,10 +14,11 @@ import java.util.regex.Pattern
 class Fetcher(
     private val c: Explorer,
     url: String,
-    cache: Boolean = false,
-    finish: Response.Listener<String>,
-) : StringRequest(Method.GET, encode(url), OnFinished(finish), OnError()) {
-
+    private val listener: Listener, // (String?) -> Unit
+    cache: Boolean = false
+) : Request<ByteArray>(Method.GET, encode(url), Response.ErrorListener {
+    Panel.handler?.obtainMessage(Panel.Action.BYTES.ordinal)?.sendToTarget()
+}) {
     init {
         setShouldCache(cache)
         tag = "fetch"
@@ -35,21 +34,22 @@ class Fetcher(
         JsonReader(InputStreamReader(c.resources.assets.open("headers.json"))), HashMap::class.java
     )
 
-    abstract class Delayer : CountDownTimer(HUMAN_DELAY, HUMAN_DELAY) {
-        override fun onTick(millisUntilFinished: Long) {}
-        abstract override fun onFinish()
-    }// SystemClock.elapsedRealtime()
+    override fun deliverResponse(response: ByteArray) = listener.onResponse(response)
 
-    class OnFinished(private val listener: Response.Listener<String>) : Response.Listener<String> {
-        override fun onResponse(response: String?) {
+    override fun parseNetworkResponse(response: NetworkResponse): Response<ByteArray> =
+        Response.success(
+            response.data as ByteArray,
+            HttpHeaderParser.parseCacheHeaders(response)
+        )
+
+    class Listener(private val finish: OnFinished) : Response.Listener<ByteArray> {
+        override fun onResponse(response: ByteArray) {
             Panel.handler?.obtainMessage(Panel.Action.BYTES.ordinal)?.sendToTarget()
-            listener.onResponse(response)
+            finish.onFinished(response)
         }
-    }
 
-    class OnError : Response.ErrorListener {
-        override fun onErrorResponse(error: VolleyError?) {
-            // TODO: "${error?.javaClass?.name}: ${error?.message}"
+        fun interface OnFinished {
+            fun onFinished(response: ByteArray)
         }
     }
 
@@ -64,12 +64,24 @@ class Fetcher(
             "https://www.instagram.com/graphql/query/?query_hash=%1\$s&variables=" +
                     "{\"id\":\"%2\$s\",\"first\":%3\$s,\"after\":\"%4\$s\"}"
         ),
+
         HUMAN_CSS1("https://www.instagram.com/static/bundles/es6/ConsumerUICommons.css/9a93ba50dadf.css"),
         HUMAN_CSS2("https://www.instagram.com/static/bundles/es6/Consumer.css/dfb83c4afa7c.css"),
         HUMAN_CSS3("https://www.instagram.com/static/bundles/es6/ProfilePageContainer.css/1ce4034b37cb.css"),
         HUMAN_CSS4("https://www.instagram.com/static/bundles/es6/ConsumerUICommons.css/9a93ba50dadf.css"),
         HUMAN_CSS5("https://www.instagram.com/static/bundles/es6/Consumer.css/dfb83c4afa7c.css"),
     }
+
+    class Delayer(private val onFinished: OnFinished) : CountDownTimer(HUMAN_DELAY, HUMAN_DELAY) {
+        override fun onTick(millisUntilFinished: Long) {}
+        override fun onFinish() {
+            onFinished.finish()
+        }
+
+        fun interface OnFinished {
+            fun finish()
+        }
+    }// SystemClock.elapsedRealtime()
 
     companion object {
         const val HUMAN_DELAY = 7000L
@@ -92,5 +104,7 @@ class Fetcher(
                 uriBuilder.appendQueryParameter(key, uri.getQueryParameter(key))
             return uriBuilder.build().toString()
         }
+
+        fun decode(data: ByteArray) = String(data)
     }
 }

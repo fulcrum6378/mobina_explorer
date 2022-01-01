@@ -18,6 +18,8 @@ import androidx.lifecycle.MutableLiveData
 class Explorer : Service() {
     private lateinit var c: Context
     lateinit var crawler: Crawler
+    lateinit var analyzer: Analyzer
+    @Suppress("MemberVisibilityCanBePrivate")
     var handler: Handler? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -62,6 +64,7 @@ class Explorer : Service() {
                 //when (msg.what) { }
             }
         }
+        analyzer = Analyzer()
         crawler = Crawler(this).also { it.start() }
     }
 

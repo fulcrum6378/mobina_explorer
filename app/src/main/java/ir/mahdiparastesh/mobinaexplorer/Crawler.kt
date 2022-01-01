@@ -5,7 +5,6 @@ import android.os.Process
 import androidx.room.Room
 import ir.mahdiparastesh.mobinaexplorer.Fun.Companion.now
 import ir.mahdiparastesh.mobinaexplorer.room.Database
-import ir.mahdiparastesh.mobinaexplorer.room.DbFile
 import ir.mahdiparastesh.mobinaexplorer.room.Session
 
 class Crawler(private val c: Explorer) : Thread() {
@@ -16,7 +15,7 @@ class Crawler(private val c: Explorer) : Thread() {
     var running = true
 
     override fun run() {
-        db = Room.databaseBuilder(c, Database::class.java, DbFile.DATABASE)
+        db = Room.databaseBuilder(c, Database::class.java, Database.DbFile.DATABASE)
             .allowMainThreadQueries()
             .build().also { dao = it.dao() }
         carryOn()
@@ -25,16 +24,16 @@ class Crawler(private val c: Explorer) : Thread() {
     fun carryOn() {
         val preNoms = dao.nominees()
         if (preNoms.isEmpty() || preNoms.all { it.anal })
-            Analyzer.search(c, expKeywords.random())
+            Inspector.search(c, proxyKeywords.random())
         else preNoms.filter { !it.anal } /**/ .random()
-            .apply { Analyzer(c, user, step + 1) }
+            .apply { Inspector(c, this) }
     }
 
     companion object {
-        val impKeywords = arrayOf(
-            "rasht", "resht", "gilan", "رشت", "گیلان", "1379", "79", "2000"
-        )
-        val expKeywords = arrayOf("mobina", "مبینا")
+        const val MAX_STEPS = 10
+        val proxyKeywords = arrayOf("rasht", "resht", "gilan", "رشت", "گیلان")
+        val impKeywords = arrayOf("1379", "79", "2000") // Adjectives
+        val expKeywords = arrayOf("mobina", "مبینا") // Given Names
 
         fun bytesSinceBoot() = TrafficStats.getUidTxBytes(Process.myUid())
     }

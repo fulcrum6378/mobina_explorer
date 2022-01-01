@@ -12,7 +12,6 @@ import android.os.Message
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import ir.mahdiparastesh.mobinaexplorer.databinding.MainBinding
-import java.lang.StringBuilder
 
 // adb connect 192.168.1.20:
 
@@ -55,7 +54,7 @@ class Panel : AppCompatActivity() {
                 } // GsonBuilder().setPrettyPrinting().create()
             }
         }
-        handler?.obtainMessage(Action.BYTES.ordinal)?.sendToTarget()
+        //handler?.obtainMessage(Action.BYTES.ordinal)?.sendToTarget()
 
         // Foreground Service
         Explorer.active.observe(this) { b -> exploring(b) }
@@ -67,6 +66,16 @@ class Panel : AppCompatActivity() {
         }
 
         // b.users.adapter = ListUser(data, this@Panel)
+
+
+        /*var data: ByteArray
+        c.resources.assets.open("1.jfif").apply {
+            data = readBytes()
+            close()
+        }
+        val bmp = BitmapFactory.decodeByteArray(data, 0, data.size)
+        b.fd.setImageBitmap(bmp)
+        InputImage.fromBitmap(bmp, 0)*/
     }
 
     override fun onDestroy() {
@@ -79,7 +88,6 @@ class Panel : AppCompatActivity() {
         vis(b.status, bb)
     }
 
-    @Suppress("unused")
     private fun vis(v: View, bb: Boolean = true) {
         v.visibility = if (bb) View.VISIBLE else View.GONE
     }
