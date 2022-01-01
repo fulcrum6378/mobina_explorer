@@ -1,13 +1,10 @@
-package ir.mahdiparastesh.mobinaexplorer
+package ir.mahdiparastesh.mobinaexplorer.view
 
 import android.content.Context
 import androidx.core.content.ContextCompat
-import java.util.*
 
-class Fun {
+class UiTools {
     companion object {
-        fun now() = Calendar.getInstance().timeInMillis
-
         fun color(c: Context, res: Int) = ContextCompat.getColor(c, res)
     }
 }

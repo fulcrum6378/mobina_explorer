@@ -3,9 +3,9 @@ package ir.mahdiparastesh.mobinaexplorer
 import android.net.TrafficStats
 import android.os.Process
 import androidx.room.Room
-import ir.mahdiparastesh.mobinaexplorer.Fun.Companion.now
 import ir.mahdiparastesh.mobinaexplorer.room.Database
 import ir.mahdiparastesh.mobinaexplorer.room.Session
+import java.util.*
 
 class Crawler(private val c: Explorer) : Thread() {
     private lateinit var db: Database
@@ -25,7 +25,7 @@ class Crawler(private val c: Explorer) : Thread() {
         val preNoms = dao.nominees()
         if (preNoms.isEmpty() || preNoms.all { it.anal })
             Inspector.search(c, proxyKeywords.random())
-        else preNoms.filter { !it.anal } /**/ .random()
+        else preNoms.filter { !it.anal } /**/.random()
             .apply { Inspector(c, this) }
     }
 
@@ -36,6 +36,8 @@ class Crawler(private val c: Explorer) : Thread() {
         val expKeywords = arrayOf("mobina", "مبینا") // Given Names
 
         fun bytesSinceBoot() = TrafficStats.getUidTxBytes(Process.myUid())
+
+        fun now() = Calendar.getInstance().timeInMillis
     }
 
     override fun interrupt() {

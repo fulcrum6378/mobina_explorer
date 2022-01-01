@@ -1,5 +1,7 @@
 package ir.mahdiparastesh.mobinaexplorer
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.view.View
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
@@ -18,35 +20,42 @@ class Analyzer {
             .build()
     )
 
-    fun analyze(img: InputImage, listener: OnFinished) = detector.process(img)
+    fun analyze(bar: ByteArray, listener: OnFinished) =
+        analyze(barToBmp(bar), listener)
+
+    fun analyze(bmp: Bitmap, listener: OnFinished) =
+        doAnalyze(InputImage.fromBitmap(bmp, 0), listener)
+
+    private fun doAnalyze(img: InputImage, listener: OnFinished) = detector.process(img)
         .addOnSuccessListener { faces -> listener.onFinished(faces) }
         .addOnFailureListener { listener.onFinished(null) }
 
-    fun show(faces: List<Face>, cl: ConstraintLayout, w: Int, h: Int) {
-        cl.removeAllViews()
-        for (obj in faces) {
-            val bound = obj.boundingBox
-            val width = relative(abs(bound.left - bound.right), w, cl.width).toInt()
-            val height = relative(abs(bound.top - bound.bottom), h, cl.height).toInt()
-            val transX = relative(bound.left, w, cl.width)
-            val transY = relative(bound.top, h, cl.height)
+    companion object {
+        fun barToBmp(bar: ByteArray): Bitmap =
+            BitmapFactory.decodeByteArray(bar, 0, bar.size)
 
-            cl.addView(View(cl.context).apply {
-                layoutParams = ConstraintLayout.LayoutParams(width, height).apply {
+        fun show(faces: List<Face>, cl: ConstraintLayout, w: Int, h: Int) {
+            cl.removeAllViews()
+            for (obj in faces) cl.addView(View(cl.context).apply {
+                val bound = obj.boundingBox
+                layoutParams = ConstraintLayout.LayoutParams(
+                    relative(abs(bound.left - bound.right), w, cl.width).toInt(),
+                    relative(abs(bound.top - bound.bottom), h, cl.height).toInt()
+                ).apply {
                     topToTop = ConstraintLayout.LayoutParams.PARENT_ID
                     leftToLeft = ConstraintLayout.LayoutParams.PARENT_ID
                 }
                 this.id = id
-                translationX = transX
-                translationY = transY
+                translationX = relative(bound.left, w, cl.width)
+                translationY = relative(bound.top, h, cl.height)
                 background = ContextCompat.getDrawable(cl.context, R.drawable.detected)
                 setOnClickListener { }
             })
         }
-    }
 
-    private fun relative(num: Int, older: Int, newer: Int) =
-        (newer.toFloat() / older.toFloat()) * num.toFloat()
+        private fun relative(num: Int, older: Int, newer: Int) =
+            (newer.toFloat() / older.toFloat()) * num.toFloat()
+    }
 
     fun interface OnFinished {
         fun onFinished(faces: MutableList<Face>?)

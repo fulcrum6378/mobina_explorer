@@ -12,6 +12,7 @@ import android.os.Message
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import ir.mahdiparastesh.mobinaexplorer.databinding.MainBinding
+import ir.mahdiparastesh.mobinaexplorer.view.UiTools.Companion.color
 
 // adb connect 192.168.1.20:
 
@@ -37,10 +38,10 @@ class Panel : AppCompatActivity() {
                     Action.BYTES.ordinal -> b.bytes.text = bytes(Crawler.bytesSinceBoot())
                     Action.STATUS.ordinal -> {
                         b.status.text = msg.obj as String
-                        b.status.setTextColor(Fun.color(c, R.color.alarm))
+                        b.status.setTextColor(color(c, R.color.alarm))
                         anStatus = ObjectAnimator.ofArgb(
                             b.status, "textColor",
-                            Fun.color(c, R.color.alarm), Fun.color(c, R.color.CPO)
+                            color(c, R.color.alarm), color(c, R.color.CPO)
                         ).apply {
                             duration = 1000L
                             addListener(object : AnimatorListenerAdapter() {
@@ -54,7 +55,7 @@ class Panel : AppCompatActivity() {
                 } // GsonBuilder().setPrettyPrinting().create()
             }
         }
-        //handler?.obtainMessage(Action.BYTES.ordinal)?.sendToTarget()
+        handler?.obtainMessage(Action.BYTES.ordinal)?.sendToTarget()
 
         // Foreground Service
         Explorer.active.observe(this) { b -> exploring(b) }
@@ -67,15 +68,17 @@ class Panel : AppCompatActivity() {
 
         // b.users.adapter = ListUser(data, this@Panel)
 
-
-        /*var data: ByteArray
-        c.resources.assets.open("1.jfif").apply {
-            data = readBytes()
-            close()
-        }
-        val bmp = BitmapFactory.decodeByteArray(data, 0, data.size)
-        b.fd.setImageBitmap(bmp)
-        InputImage.fromBitmap(bmp, 0)*/
+        /*val an = Analyzer()
+        val mobina = Mobina(c).first
+        b.fd.setImageBitmap(mobina)
+        an.analyze(mobina) {
+            if (it == null) return@analyze
+            Analyzer.show(it, b.detection, mobina.width, mobina.height)
+            c.openFileOutput("mobina_first.txt", Context.MODE_PRIVATE).apply {
+                write(it[0].toString().encodeToByteArray())
+                close()
+            }
+        }*/
     }
 
     override fun onDestroy() {

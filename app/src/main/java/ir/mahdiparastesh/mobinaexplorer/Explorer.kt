@@ -17,8 +17,9 @@ import androidx.lifecycle.MutableLiveData
 @SuppressLint("UnspecifiedImmutableFlag")
 class Explorer : Service() {
     private lateinit var c: Context
-    lateinit var crawler: Crawler
+    lateinit var mobina: Mobina
     lateinit var analyzer: Analyzer
+    lateinit var crawler: Crawler
     @Suppress("MemberVisibilityCanBePrivate")
     var handler: Handler? = null
 
@@ -59,12 +60,13 @@ class Explorer : Service() {
             addAction(0, c.resources.getString(R.string.notif_stop), pi(c, Code.STOP))
         }.build())
 
+        mobina = Mobina(c)
+        analyzer = Analyzer()
         handler = object : Handler(Looper.getMainLooper()) {
             override fun handleMessage(msg: Message) {
                 //when (msg.what) { }
             }
         }
-        analyzer = Analyzer()
         crawler = Crawler(this).also { it.start() }
     }
 

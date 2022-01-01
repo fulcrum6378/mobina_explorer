@@ -1,11 +1,9 @@
 package ir.mahdiparastesh.mobinaexplorer
 
-import android.graphics.BitmapFactory
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
 import com.google.gson.Gson
-import com.google.mlkit.vision.common.InputImage
 import ir.mahdiparastesh.mobinaexplorer.Fetcher.Type
 import ir.mahdiparastesh.mobinaexplorer.json.Follow
 import ir.mahdiparastesh.mobinaexplorer.json.GraphQL.*
@@ -44,8 +42,7 @@ class Inspector(private val c: Explorer, nom: Nominee) {
             var lookAt = u.profile_pic_url_hd
             if (lookAt == null) lookAt = u.profile_pic_url
             if (lookAt != null) Fetcher(c, lookAt, Fetcher.Listener {
-                val bmp = BitmapFactory.decodeByteArray(it, 0, it.size)
-                c.analyzer.analyze(InputImage.fromBitmap(bmp, 0)) {
+                c.analyzer.analyze(it) {
                     // TODO: if (it.isNullOrEmpty()) { TODO(); return; }
                     // TODO: COMPARE
                     /*c.crawler.dao.updateNominee(nom.apply { anal = true })
