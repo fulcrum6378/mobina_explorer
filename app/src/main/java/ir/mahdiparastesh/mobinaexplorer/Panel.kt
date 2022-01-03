@@ -11,8 +11,13 @@ import android.os.Looper
 import android.os.Message
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import com.google.gson.Gson
 import ir.mahdiparastesh.mobinaexplorer.databinding.MainBinding
 import ir.mahdiparastesh.mobinaexplorer.view.UiTools.Companion.color
+import org.tensorflow.lite.Interpreter
+import java.io.FileInputStream
+import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
 
 // adb connect 192.168.1.20:
 
@@ -55,7 +60,7 @@ class Panel : AppCompatActivity() {
                 } // GsonBuilder().setPrettyPrinting().create()
             }
         }
-        handler?.obtainMessage(Action.BYTES.ordinal)?.sendToTarget()
+        //handler?.obtainMessage(Action.BYTES.ordinal)?.sendToTarget()
 
         // Foreground Service
         Explorer.active.observe(this) { b -> exploring(b) }
