@@ -42,7 +42,7 @@ class Inspector(private val c: Explorer, nom: Nominee) {
             var lookAt = u.profile_pic_url_hd
             if (lookAt == null) lookAt = u.profile_pic_url
             if (lookAt != null) Fetcher(c, lookAt, Fetcher.Listener {
-                c.analyzer.analyze(it) {
+                c.analyzer.Subject(it) {
                     // TODO: if (it.isNullOrEmpty()) { TODO(); return; }
                     // TODO: COMPARE
                     /*c.crawler.dao.updateNominee(nom.apply { anal = true })

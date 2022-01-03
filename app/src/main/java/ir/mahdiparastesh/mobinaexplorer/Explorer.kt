@@ -61,7 +61,7 @@ class Explorer : Service() {
         }.build())
 
         mobina = Mobina(c)
-        analyzer = Analyzer()
+        analyzer = Analyzer(c)
         handler = object : Handler(Looper.getMainLooper()) {
             override fun handleMessage(msg: Message) {
                 //when (msg.what) { }

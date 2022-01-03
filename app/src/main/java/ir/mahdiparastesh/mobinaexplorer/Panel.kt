@@ -11,13 +11,8 @@ import android.os.Looper
 import android.os.Message
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import com.google.gson.Gson
 import ir.mahdiparastesh.mobinaexplorer.databinding.MainBinding
 import ir.mahdiparastesh.mobinaexplorer.view.UiTools.Companion.color
-import org.tensorflow.lite.Interpreter
-import java.io.FileInputStream
-import java.nio.ByteBuffer
-import java.nio.channels.FileChannel
 
 // adb connect 192.168.1.20:
 
@@ -72,18 +67,11 @@ class Panel : AppCompatActivity() {
         }
 
         // b.users.adapter = ListUser(data, this@Panel)
-
-        /*val an = Analyzer()
-        val mobina = Mobina(c).first
-        b.fd.setImageBitmap(mobina)
-        an.analyze(mobina) {
-            if (it == null) return@analyze
-            Analyzer.show(it, b.detection, mobina.width, mobina.height)
-            c.openFileOutput("mobina_first.txt", Context.MODE_PRIVATE).apply {
-                write(it[0].toString().encodeToByteArray())
-                close()
-            }
-        }*/
+        //val an = Analyzer(c)
+        //an.Subject(Mobina(c).first) { TfUtils.save(c, it, "1") }
+        //an.Subject(Mobina(c).second) { TfUtils.save(c, it, "2") }
+        //an.Subject(Mobina(c).third) { TfUtils.save(c, it, "3") }
+        //b.bytes.text = it.toString()
     }
 
     override fun onDestroy() {
