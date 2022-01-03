@@ -7,7 +7,7 @@ import ir.mahdiparastesh.mobinaexplorer.Explorer
 import java.io.File
 
 @Database(
-    entities = [Nominee::class, Session::class],
+    entities = [Nominee::class, Candidate::class, Session::class],
     version = 1, exportSchema = false
 )
 abstract class Database : RoomDatabase() {
@@ -36,6 +36,13 @@ abstract class Database : RoomDatabase() {
 
         @Update
         fun updateNominee(item: Nominee)
+
+
+        @Query("SELECT * FROM Candidate")
+        fun candidates(): List<Candidate>
+
+        @Insert(onConflict = OnConflictStrategy.REPLACE)
+        fun addCandidate(item: Candidate)
     }
 
     @SuppressLint("SdCardPath")

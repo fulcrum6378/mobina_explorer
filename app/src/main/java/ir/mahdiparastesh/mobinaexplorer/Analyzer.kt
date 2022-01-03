@@ -21,7 +21,7 @@ class Analyzer(val c: Context) {
     var model: ByteBuffer
     private val detector = FaceDetection.getClient(
         FaceDetectorOptions.Builder()
-            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE) // PERFORMANCE_MODE_FAST
+            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
             .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_ALL)
             .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_ALL)
             .build()
@@ -41,18 +41,21 @@ class Analyzer(val c: Context) {
         constructor(bar: ByteArray, finished: OnFinished) : this(barToBmp(bar), finished)
 
         init {
-            detector.process(InputImage.fromBitmap(bmp, 0))
-                .addOnSuccessListener { wryFaces ->
-                    results = Results(wryFaces.size, finished, wryFaces)
-                    for (f in wryFaces.indices) TfUtils.rotate(bmp, wryFaces[f].headEulerAngleZ)
-                        .apply {
-                            detector.process(
-                                InputImage.fromBitmap(this, 0)
-                            ).addOnSuccessListener { faces ->
-                                results!!.add(Result(faces[f], compare(crop(this, faces[f]))))
-                            }.addOnFailureListener { /*finished.onFinished(-1f)*/ }
+            detector.process(InputImage.fromBitmap(bmp, 0)).addOnSuccessListener { wryFaces ->
+                results = Results(wryFaces.size, finished, wryFaces)
+                var ff = 0
+                for (f in wryFaces.indices) TfUtils.rotate(bmp, wryFaces[f].headEulerAngleZ).apply {
+                    detector.process(InputImage.fromBitmap(this, 0)).addOnSuccessListener { faces ->
+                        if (faces.isNullOrEmpty() || ff >= faces.size)
+                            results!!.result(null)
+                        else {
+                            results!!.cropped = crop(this, faces[ff])
+                            results!!.result(Result(faces[ff], compare(results!!.cropped!!)))
+                            ff++
                         }
-                }.addOnFailureListener { finished.onFinished(results) }
+                    }.addOnFailureListener { results!!.result(null) }
+                }
+            }.addOnFailureListener { finished.onFinished(results) }
         }
 
         private fun crop(raw: Bitmap, f: Face): Bitmap = Bitmap.createBitmap(
@@ -61,14 +64,14 @@ class Analyzer(val c: Context) {
             f.boundingBox.right - f.boundingBox.left
         )
 
-        private fun compare(cropped: Bitmap): Float {
-            val input = TfUtils.tensor(cropped)
+        private fun compare(cropped: Bitmap): FloatArray {
+            val input = arrayOf(TfUtils.tensor(cropped))
             val output = Array(input.size) { FloatArray(2) }
             Interpreter(model).use {
                 it.run(input, output)
                 it.close()
             }
-            return output[0][0]
+            return output[0]
         }
 
         fun show(cl: ConstraintLayout, w: Int, h: Int) {
@@ -95,23 +98,44 @@ class Analyzer(val c: Context) {
             (newer.toFloat() / older.toFloat()) * num.toFloat()
     }
 
-    companion object {
-        fun barToBmp(bar: ByteArray): Bitmap =
-            BitmapFactory.decodeByteArray(bar, 0, bar.size)
-    }
-
     fun interface OnFinished {
         fun onFinished(results: Results?)
     }
 
     class Results(
-        private val expect: Int, private val listener: OnFinished, val wryFaces: List<Face>
-    ) : ArrayList<Result?>() {
-        override fun add(element: Result?): Boolean {
-            if (size == expect) listener.onFinished(this)
-            return super.add(element)
+        private val expect: Int, private val listener: OnFinished, var wryFaces: List<Face>
+    ) : ArrayList<Result>() {
+        private var reality = 0
+        var maxima = -1f
+        var qualified = false
+        var cropped: Bitmap? = null
+
+        init {
+            if (expect == 0) end()
+        }
+
+        fun result(e: Result?) {
+            if (maxima != -1f) return
+            reality++
+            if (e != null) add(e)
+            if (reality == expect) end()
+        }
+
+        private fun end() {
+            listener.onFinished(this)
+            if (size > 0) {
+                maxima = maxOf { it.score[1] }
+                qualified = maxima > CANDIDATURE
+            }
         }
     }
 
-    data class Result(val face: Face, val score: Float)
+    class Result(val face: Face, val score: FloatArray)
+
+    companion object {
+        const val CANDIDATURE = 0.9f
+
+        fun barToBmp(bar: ByteArray): Bitmap =
+            BitmapFactory.decodeByteArray(bar, 0, bar.size)
+    }
 }

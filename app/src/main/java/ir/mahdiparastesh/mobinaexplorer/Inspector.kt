@@ -10,6 +10,7 @@ import ir.mahdiparastesh.mobinaexplorer.json.GraphQL.*
 import ir.mahdiparastesh.mobinaexplorer.json.PageConfig
 import ir.mahdiparastesh.mobinaexplorer.json.Rest
 import ir.mahdiparastesh.mobinaexplorer.json.Search
+import ir.mahdiparastesh.mobinaexplorer.room.Candidate
 import ir.mahdiparastesh.mobinaexplorer.room.Nominee
 
 class Inspector(private val c: Explorer, nom: Nominee) {
@@ -37,19 +38,22 @@ class Inspector(private val c: Explorer, nom: Nominee) {
                 return@Listener
             }
             timeline = u.edge_owner_to_timeline_media!!
-            allPosts.addAll(timeline.edges)
 
             var lookAt = u.profile_pic_url_hd
             if (lookAt == null) lookAt = u.profile_pic_url
-            if (lookAt != null) Fetcher(c, lookAt, Fetcher.Listener {
-                c.analyzer.Subject(it) {
-                    // TODO: if (it.isNullOrEmpty()) { TODO(); return; }
-                    // TODO: COMPARE
-                    /*c.crawler.dao.updateNominee(nom.apply { anal = true })
-                    handler.obtainMessage(handler.ANALYZED).sendToTarget()*/
+            if (lookAt != null) Fetcher(c, lookAt, Fetcher.Listener { img ->
+                c.analyzer.Subject(img) { res ->
+                    if (res.isNullOrEmpty() || !res.qualified)
+                        resumePosts(timeline.edges)
+                    else qualify(res, Candidate.TYPE_PROFILE)
                 }
-            })// else Fetcher.Delayer { resumePosts() }
+            })
         })
+    }
+
+    private fun qualify(res: Analyzer.Results, type: String) {
+        c.crawler.dao.addCandidate(Candidate(u.id!!.toLong(), res.maxima, type))
+        handler.obtainMessage(handler.ANALYZED).sendToTarget()
     }
 
     private val handler = object : Handler(Looper.getMainLooper()) {
@@ -60,10 +64,12 @@ class Inspector(private val c: Explorer, nom: Nominee) {
         @Suppress("UNCHECKED_CAST")
         override fun handleMessage(msg: Message) {
             when (msg.what) {
-                ANALYZED ->
+                ANALYZED -> {
+                    c.crawler.dao.updateNominee(nom.apply { anal = true })
                     if (nom.step < Crawler.MAX_STEPS && u.is_private == false)
                         allFollow(Type.FOLLOWERS, mutableListOf())
                     else c.crawler.carryOn()
+                }
                 FOLLOWERS -> {
                     addFollow(msg.obj as List<Rest.User>)
                     Fetcher.Delayer { allFollow(Type.FOLLOWING, mutableListOf()) }
@@ -88,9 +94,15 @@ class Inspector(private val c: Explorer, nom: Nominee) {
         }
     }
 
-    private fun resumePosts() {
+    private fun resumePosts(initial: Array<EdgePost>?) {
+        if (initial != null) {
+            allPosts.addAll(timeline.edges)
+            analLot(timeline.edges)
+            return
+        }
+
         if (!timeline.page_info.has_next_page)
-            TODO()
+            handler.obtainMessage(handler.ANALYZED).sendToTarget()
         else Fetcher.Delayer {
             Fetcher(c,
                 Type.POSTS.url.format(hash, u.id, allPosts.size, timeline.page_info.end_cursor),
@@ -99,9 +111,27 @@ class Inspector(private val c: Explorer, nom: Nominee) {
                         .data.user
                     timeline = u.edge_owner_to_timeline_media!!
                     allPosts.addAll(timeline.edges)
-                    resumePosts()
+                    analLot(timeline.edges)
                 })
         }
+    }
+
+    private fun analLot(lot: Array<EdgePost>) {
+        lot.forEachIndexed { i, post ->
+            // TODO: IF KEYWORDS WERE FOUND IN THE CAPTION OR ETC, STEP ==> 0
+            post.node.thumbnail_resources.forEachIndexed { ii, slide ->
+                var end = false
+                Fetcher(c, slide.src, Fetcher.Listener { img ->
+                    c.analyzer.Subject(img) { res ->
+                        if (res.isNullOrEmpty() || !res.qualified) return@Subject
+                        qualify(res, Candidate.TYPE_POST.format(i.toString(), ii.toString()))
+                        end = true
+                    }
+                })
+                if (end) return@analLot
+            }
+        }
+        resumePosts(null)
     }
 
     private fun allFollow(type: Type, list: MutableList<Rest.User>, next_max_id: String = "") {
@@ -126,7 +156,10 @@ class Inspector(private val c: Explorer, nom: Nominee) {
 
         fun search(c: Explorer, word: String) = Fetcher(c, Type.SEARCH.url.format(word),
             Fetcher.Listener { str ->
-                for (x in Gson().fromJson(Fetcher.decode(str), Search::class.java).users.toMutableList()
+                for (x in Gson().fromJson(
+                    Fetcher.decode(str),
+                    Search::class.java
+                ).users.toMutableList()
                     .also { it.sortWith(Search.ItemUser.Sort()) }) c.crawler.dao.addNominee(
                     Nominee(
                         x.user.pk.toLong(), x.user.username, x.user.full_name, x.user.is_private,

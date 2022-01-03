@@ -8,18 +8,17 @@ import java.io.ByteArrayOutputStream
 
 class TfUtils {
     companion object {
-        private const val MODEL_W = 800
-        private const val MODEL_H = 800
+        private const val MODEL_SIZE = 224
 
-        fun tensor(bmp: Bitmap): Array<Array<FloatArray>> {
-            val scaled = Bitmap.createScaledBitmap(bmp, MODEL_W, MODEL_H, true)
-            val data = Array(MODEL_W) { Array(MODEL_H) { FloatArray(3) } }
-            for (y in 0 until MODEL_W) for (x in 0 until MODEL_H) {
-                val c = Color.valueOf(scaled.getPixel(x, y))
-                data[y][x][0] = c.red()
-                data[y][x][1] = c.green()
-                data[y][x][2] = c.blue()
-            }
+        fun tensor(rawBmp: Bitmap): Array<Array<FloatArray>> {
+            val bmp = Bitmap.createScaledBitmap(rawBmp, MODEL_SIZE, MODEL_SIZE, true)
+            val data = Array(MODEL_SIZE) { Array(MODEL_SIZE) { FloatArray(3) } }
+            for (y in 0 until MODEL_SIZE) for (x in 0 until MODEL_SIZE)
+                Color.valueOf(bmp.getPixel(x, y)).apply {
+                    data[y][x][0] = red()
+                    data[y][x][1] = green()
+                    data[y][x][2] = blue()
+                }
             return data
         }
 

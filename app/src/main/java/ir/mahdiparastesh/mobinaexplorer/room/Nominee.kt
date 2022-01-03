@@ -7,7 +7,6 @@ import androidx.room.PrimaryKey
 @Suppress("SpellCheckingInspection")
 @Entity
 class Nominee(
-    // Those who have the keywords and the nearest relevant following/followers up to 10 steps
     @PrimaryKey(autoGenerate = false) @ColumnInfo(name = "id") var id: Long,
     @ColumnInfo(name = "user") var user: String,
     @ColumnInfo(name = "name") var name: String,
