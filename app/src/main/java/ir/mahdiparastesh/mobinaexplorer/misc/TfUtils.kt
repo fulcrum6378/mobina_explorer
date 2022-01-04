@@ -1,15 +1,22 @@
 package ir.mahdiparastesh.mobinaexplorer.misc
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Matrix
+import android.widget.ImageView
+import android.widget.TextView
+import com.google.gson.GsonBuilder
+import ir.mahdiparastesh.mobinaexplorer.Analyzer
+import ir.mahdiparastesh.mobinaexplorer.Analyzer.Companion.MODEL_SIZE
 import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
 
+@Suppress("unused")
 class TfUtils {
     companion object {
-        private const val MODEL_SIZE = 224
-
         fun tensor(rawBmp: Bitmap): Array<Array<FloatArray>> {
             val bmp = Bitmap.createScaledBitmap(rawBmp, MODEL_SIZE, MODEL_SIZE, true)
             val data = Array(MODEL_SIZE) { Array(MODEL_SIZE) { FloatArray(3) } }
@@ -26,13 +33,62 @@ class TfUtils {
             bmp, 0, 0, bmp.width, bmp.height, Matrix().apply { postRotate(deg) }, false
         )
 
-        fun save(c: Context, bmp: Bitmap, fName: String) {
-            c.openFileOutput("$fName.jpg", Context.MODE_PRIVATE).apply {
+        fun preTrain(c: Context) { // Put in a separate thread
+            val an = Analyzer(c)
+            File(c.filesDir, "output").apply { if (!exists()) mkdir() }
+            c.resources.assets.list("input")?.map { crush ->
+                var ci = 0
+                File(c.filesDir, "output/$crush").apply { if (!exists()) mkdir() }
+                c.resources.assets.list("input/$crush")?.map { photo ->
+                    var data: ByteArray?
+                    c.resources.assets.open("input/$crush/$photo").apply {
+                        data = readBytes()
+                        close()
+                    }
+                    val bmp = Analyzer.barToBmp(data) ?: return
+                    an.Subject(bmp) { res ->
+                        if (res?.cropped != null) {
+                            save(c, res.cropped!!, "output/$crush/$ci.jpg")
+                            ci++
+                        }
+                    }
+                }
+            }
+            //an.Subject(Mobina(c).first) { save(c, it, "1.jfif") }
+        }
+
+        private fun save(c: Context, bmp: Bitmap, path: String) {
+            FileOutputStream(File(c.filesDir, path)).apply {
                 write(ByteArrayOutputStream().apply {
                     bmp.compress(Bitmap.CompressFormat.JPEG, 100, this)
                 }.toByteArray())
-                bmp.recycle()
                 close()
+            }
+            bmp.recycle()
+        }
+
+        @SuppressLint("SetTextI18n")
+        fun test(c: Context, iv: ImageView, tv: TextView) {
+            val an = Analyzer(c)
+            var data: ByteArray
+            c.resources.assets.open("1.jfif").apply {
+                data = readBytes()
+                close()
+            }
+            val bmp = Analyzer.barToBmp(data)
+            an.Subject(bmp) {
+                iv.setImageBitmap(it?.cropped)
+                if (it == null) return@Subject
+                val sb = StringBuilder()
+                for (r in it) sb.append(GsonBuilder().setPrettyPrinting().create().toJson(
+                    HashMap<String, Float>().apply {
+                        r.prob.forEachIndexed { i, fl ->
+                            this[Analyzer.MODEL.labels[i].replaceFirstChar(Char::titlecase)] = fl
+                        }
+                    }.toList().sortedBy { (_, fl) -> fl }.toMap()
+                )
+                ).append("\n")
+                tv.text = sb.toString()
             }
         }
     }

@@ -11,7 +11,6 @@ import android.os.Looper
 import android.os.Message
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import com.google.gson.Gson
 import ir.mahdiparastesh.mobinaexplorer.databinding.MainBinding
 import ir.mahdiparastesh.mobinaexplorer.view.UiTools.Companion.color
 
@@ -53,7 +52,7 @@ class Panel : AppCompatActivity() {
                             start()
                         }
                     }
-                } // GsonBuilder().setPrettyPrinting().create()
+                }
             }
         }
         //handler?.obtainMessage(Action.BYTES.ordinal)?.sendToTarget()
@@ -68,21 +67,8 @@ class Panel : AppCompatActivity() {
         }
 
         // b.users.adapter = ListUser(data, this@Panel)
-        val an = Analyzer(c)
-        var data: ByteArray
-        c.resources.assets.open("5.jpg").apply {
-            data = readBytes()
-            close()
-        }
-        val bmp = Analyzer.barToBmp(data)
-        an.Subject(bmp) {
-            b.bytes.text = Gson().toJson(it) + " ${it?.maxima}"//"${it?.maxima}"
-            b.fd.setImageBitmap(it?.cropped)
-        }
-        //an.Subject(Mobina(c).first) { TfUtils.save(c, it, "1") }
-        //an.Subject(Mobina(c).second) { TfUtils.save(c, it, "2") }
-        //an.Subject(Mobina(c).third) { TfUtils.save(c, it, "3") }
-        //b.bytes.text = it.toString()
+        // Thread { TfUtils.preTrain(c) }.start()
+        // TfUtils.test(c, b.fd, b.bytes)
     }
 
     override fun onDestroy() {

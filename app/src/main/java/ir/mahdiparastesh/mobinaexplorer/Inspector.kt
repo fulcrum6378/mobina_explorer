@@ -31,8 +31,8 @@ class Inspector(private val c: Explorer, nom: Nominee) {
 
             val cnf = Fetcher.decode(html).substringAfter(preConfig).substringBefore(posConfig)
             try {
-                u = Gson().fromJson(cnf, PageConfig::class.java).entry_data
-                    .ProfilePage[0].graphql.user
+                u = Gson().fromJson(cnf, PageConfig::class.java).entry_data.ProfilePage[0]
+                    .graphql.user
             } catch (ignored: Exception) {
                 // TODO: Not Signed In
                 return@Listener
@@ -43,7 +43,7 @@ class Inspector(private val c: Explorer, nom: Nominee) {
             if (lookAt == null) lookAt = u.profile_pic_url
             if (lookAt != null) Fetcher(c, lookAt, Fetcher.Listener { img ->
                 c.analyzer.Subject(img) { res ->
-                    if (res.isNullOrEmpty() || !res.qualified)
+                    if (res.isNullOrEmpty() || !res.anyQualified())
                         resumePosts(timeline.edges)
                     else qualify(res, Candidate.TYPE_PROFILE)
                 }
@@ -52,7 +52,7 @@ class Inspector(private val c: Explorer, nom: Nominee) {
     }
 
     private fun qualify(res: Analyzer.Results, type: String) {
-        c.crawler.dao.addCandidate(Candidate(u.id!!.toLong(), res.maxima, type))
+        c.crawler.dao.addCandidate(Candidate(u.id!!.toLong(), res.best(), type))
         handler.obtainMessage(handler.ANALYZED).sendToTarget()
     }
 
@@ -123,7 +123,7 @@ class Inspector(private val c: Explorer, nom: Nominee) {
                 var end = false
                 Fetcher(c, slide.src, Fetcher.Listener { img ->
                     c.analyzer.Subject(img) { res ->
-                        if (res.isNullOrEmpty() || !res.qualified) return@Subject
+                        if (res.isNullOrEmpty() || !res.anyQualified()) return@Subject
                         qualify(res, Candidate.TYPE_POST.format(i.toString(), ii.toString()))
                         end = true
                     }

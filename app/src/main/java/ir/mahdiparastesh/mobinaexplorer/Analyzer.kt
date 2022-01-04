@@ -15,6 +15,7 @@ import org.tensorflow.lite.Interpreter
 import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
+import java.util.Collections.max
 import kotlin.math.abs
 
 class Analyzer(val c: Context) {
@@ -28,20 +29,21 @@ class Analyzer(val c: Context) {
     )
 
     init {
-        c.resources.assets.openFd("mobina.tflite").apply {
+        c.resources.assets.openFd(MODEL.file).apply {
             model = FileInputStream(fileDescriptor).channel
                 .map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
             close()
         }
     }
 
-    inner class Subject(bmp: Bitmap, private val finished: OnFinished) {
+    inner class Subject(bmp: Bitmap?, private val finished: OnFinished) {
         private var results: Results? = null
 
         constructor(bar: ByteArray, finished: OnFinished) : this(barToBmp(bar), finished)
 
         init {
-            detector.process(InputImage.fromBitmap(bmp, 0)).addOnSuccessListener { wryFaces ->
+            if (bmp == null) finished.onFinished(null)
+            else detector.process(InputImage.fromBitmap(bmp, 0)).addOnSuccessListener { wryFaces ->
                 results = Results(wryFaces.size, finished, wryFaces)
                 var ff = 0
                 for (f in wryFaces.indices) TfUtils.rotate(bmp, wryFaces[f].headEulerAngleZ).apply {
@@ -49,13 +51,15 @@ class Analyzer(val c: Context) {
                         if (faces.isNullOrEmpty() || ff >= faces.size)
                             results!!.result(null)
                         else {
-                            results!!.cropped = crop(this, faces[ff])
-                            results!!.result(Result(faces[ff], compare(results!!.cropped!!)))
+                            val cropped = if (faces[ff].boundingBox != wryFaces[f].boundingBox)
+                                crop(this, faces[ff]) else this
+                            results!!.cropped = cropped
+                            results!!.result(Result(compare(cropped))) // faces[ff]
                             ff++
                         }
                     }.addOnFailureListener { results!!.result(null) }
                 }
-            }.addOnFailureListener { finished.onFinished(results) }
+            }.addOnFailureListener { finished.onFinished(null) }
         }
 
         private fun crop(raw: Bitmap, f: Face): Bitmap = Bitmap.createBitmap(
@@ -66,7 +70,7 @@ class Analyzer(val c: Context) {
 
         private fun compare(cropped: Bitmap): FloatArray {
             val input = arrayOf(TfUtils.tensor(cropped))
-            val output = Array(input.size) { FloatArray(2) }
+            val output = Array(input.size) { FloatArray(MODEL.labels.size) }
             Interpreter(model).use {
                 it.run(input, output)
                 it.close()
@@ -106,36 +110,48 @@ class Analyzer(val c: Context) {
         private val expect: Int, private val listener: OnFinished, var wryFaces: List<Face>
     ) : ArrayList<Result>() {
         private var reality = 0
-        var maxima = -1f
-        var qualified = false
         var cropped: Bitmap? = null
 
         init {
-            if (expect == 0) end()
+            if (expect == 0) listener.onFinished(this)
         }
 
         fun result(e: Result?) {
-            if (maxima != -1f) return
             reality++
             if (e != null) add(e)
-            if (reality == expect) end()
+            if (reality == expect) listener.onFinished(this)
         }
 
-        private fun end() {
-            listener.onFinished(this)
-            if (size > 0) {
-                maxima = maxOf { it.score[1] }
-                qualified = maxima > CANDIDATURE
-            }
-        }
+        fun anyQualified() = any { it.qualified }
+
+        @Suppress("NestedLambdaShadowedImplicitParameter")
+        fun best() = filter { it.qualified }.maxOf { it.prob[it.like] }
     }
 
-    class Result(val face: Face, val score: FloatArray)
+    class Result(
+        val prob: FloatArray,
+        var like: Int = prob.indexOfFirst { it == max(prob.toList()) },
+        var qualified: Boolean = like == 0 && prob[0] > CANDIDATURE
+    )
 
     companion object {
-        const val CANDIDATURE = 0.9f
+        val MODEL = Models.PLURAL
+        const val MODEL_SIZE = 224
+        const val CANDIDATURE = 0.5f
 
-        fun barToBmp(bar: ByteArray): Bitmap =
-            BitmapFactory.decodeByteArray(bar, 0, bar.size)
+        fun barToBmp(bar: ByteArray?): Bitmap? =
+            if (bar != null) BitmapFactory.decodeByteArray(bar, 0, bar.size) else null
+    }
+
+    @Suppress("SpellCheckingInspection", "unused")
+    enum class Models(val file: String, val labels: Array<String>) {
+        PLURAL(
+            "mobina.tflite", arrayOf(
+                "Mobina", "aimi", "amin", "amir", "amirali", "ava", "dad", "diana", "dominik",
+                "elisany", "elizabeth", "emily_feld", "hannah", "hasani", "hssp", "jun", "mahdi",
+                "maryam", "mina_vahid", "mohaddeseh", "nana", "natasha", "olivier", "pham",
+                "queeny", "sara", "sarah", "vivian", "william"
+            )
+        )
     }
 }

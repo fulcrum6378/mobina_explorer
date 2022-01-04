@@ -20,6 +20,6 @@ class Mobina(private val c: Context) {
             data = readBytes()
             close()
         }
-        return Analyzer.barToBmp(data)
+        return Analyzer.barToBmp(data)!!
     }
 }
