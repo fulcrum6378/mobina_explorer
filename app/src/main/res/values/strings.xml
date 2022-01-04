@@ -6,9 +6,9 @@
     <string name="notif_title">Exploring for Mobina&#8230;</string>
     <string name="notif_stop">Stop</string>
     <string-array name="bytes">
-        <item>bytes</item>
-        <item>kilobytes</item>
-        <item>megabytes</item>
-        <item>gigabytes</item>
+        <item>b</item>
+        <item>kb</item>
+        <item>mg</item>
+        <item>gb</item>
     </string-array>
 </resources>

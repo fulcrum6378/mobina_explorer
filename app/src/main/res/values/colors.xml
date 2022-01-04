@@ -2,13 +2,13 @@
 <resources>
     <color name="CP">#7B56C0</color>
     <color name="CPV">#5731ad</color>
-    <color name="CPO">#777B56C0</color>
+    <color name="CPO">#507B56C0</color>
     <color name="CS">#F9F9F9</color>
     <color name="CSV">#FFF</color>
-    <color name="CSO">#55F9F9F9</color>
+    <color name="CSO">#50F9F9F9</color>
     <color name="TP">#00000000</color>
 
     <color name="alarm">#D816A1</color>
-    <color name="analyzer_1">@color/CP</color>
-    <color name="analyzer_1_pressed">#440EC10E</color>
+    <color name="analyzer_1">@color/alarm</color>
+    <color name="analyzer_1_pressed">#44D816A1</color>
 </resources>

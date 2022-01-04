@@ -4,49 +4,37 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/button_1"
-    tools:context=".Panel">
+    tools:context=".Panel"
+    tools:ignore="ContentDescription">
 
-    <ImageView
-        android:id="@+id/explore"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/start"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:contentDescription="@string/app_name"
-        android:src="@drawable/robot"
+        android:background="@drawable/start"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintHeight_percent="0.5"
+        app:layout_constraintHeight_percent="0.8"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintWidth_percent="0.5" />
+        app:layout_constraintWidth_percent="0.8">
 
-    <!--<ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-        <TextView
-            android:id="@+id/test"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingHorizontal="10dp"
-            android:paddingVertical="20dp"
-            android:textColor="#000"
-            android:textIsSelectable="true"
-            android:textSize="15sp"
-            app:layout_constraintTop_toTopOf="parent" />
-    </ScrollView>-->
-
-    <!--<androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/users"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:clipToPadding="false"
-        android:paddingVertical="25dp"
-        android:visibility="gone"
-        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />-->
+        <ImageView
+            android:id="@+id/robot"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:contentDescription="@string/app_name"
+            android:src="@drawable/robot"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintHeight_percent="0.6"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintWidth_percent="0.6" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
     <ImageView
-        android:id="@+id/fd"
+        android:id="@+id/face"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:adjustViewBounds="true"
@@ -57,10 +45,10 @@
         android:id="@+id/detection"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="@id/fd"
-        app:layout_constraintLeft_toLeftOf="@id/fd"
-        app:layout_constraintRight_toRightOf="@id/fd"
-        app:layout_constraintTop_toTopOf="@id/fd" />
+        app:layout_constraintBottom_toBottomOf="@id/face"
+        app:layout_constraintLeft_toLeftOf="@id/face"
+        app:layout_constraintRight_toRightOf="@id/face"
+        app:layout_constraintTop_toTopOf="@id/face" />
 
     <TextView
         android:id="@+id/status"
@@ -73,7 +61,7 @@
         app:layout_constraintBottom_toTopOf="@id/bytes"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/explore"
+        app:layout_constraintTop_toBottomOf="@id/robot"
         app:layout_constraintWidth_percent="0.85" />
 
     <TextView
@@ -88,4 +76,13 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/candidature"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingVertical="25dp"
+        android:visibility="gone"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 </androidx.constraintlayout.widget.ConstraintLayout>
