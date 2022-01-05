@@ -2,7 +2,6 @@ package ir.mahdiparastesh.mobinaexplorer
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
-import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.content.Context
@@ -14,8 +13,13 @@ import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import ir.mahdiparastesh.mobinaexplorer.databinding.MainBinding
+import ir.mahdiparastesh.mobinaexplorer.room.Candidate
+import ir.mahdiparastesh.mobinaexplorer.room.Database
+import ir.mahdiparastesh.mobinaexplorer.view.ListUser
+import ir.mahdiparastesh.mobinaexplorer.view.Momentum
 import ir.mahdiparastesh.mobinaexplorer.view.UiTools
 import ir.mahdiparastesh.mobinaexplorer.view.UiTools.Companion.color
+import ir.mahdiparastesh.mobinaexplorer.view.UiTools.Companion.vis
 
 // adb connect 192.168.1.20:
 
@@ -24,14 +28,9 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
     private lateinit var c: Context
     private lateinit var b: MainBinding
     private var anStatus: ObjectAnimator? = null
+    private lateinit var db: Database
+    private lateinit var dao: Database.DAO
     private lateinit var dm: DisplayMetrics
-    private val maxBias = 0.5f
-    private val minBias = 0f
-    private val movePerMove = 0.03f
-    private var y = 0f
-    private var lastMove: Long? = null
-    private var speed = 0f // moves per second
-    private var overdrive: AnimatorSet? = null // TODO: IMPLEMENT IT
 
     companion object {
         var handler: Handler? = null
@@ -42,10 +41,12 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         b = MainBinding.inflate(layoutInflater)
         setContentView(b.root)
         c = applicationContext
+        db = Database.DbFile.build(c).also { dao = it.dao() }
         dm = resources.displayMetrics
 
         // Handler
         handler = object : Handler(Looper.getMainLooper()) {
+            @Suppress("UNCHECKED_CAST")
             override fun handleMessage(msg: Message) {
                 when (msg.what) {
                     Action.BYTES.ordinal ->
@@ -66,6 +67,12 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                             start()
                         }
                     }
+                    Action.CANDIDATES.ordinal -> {
+                        val canNom = msg.obj as List<Candidate>
+                        b.candidature.adapter = ListUser(canNom, this@Panel)
+                        vis(b.noCan, canNom.isEmpty())
+                    }
+                    Action.REFRESH.ordinal -> candidature()
                 }
             }
         }
@@ -87,10 +94,14 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
 
         // Candidates
         b.root.setOnTouchListener(this)
-        // b.users.adapter = ListUser(data, this@Panel)
 
         // Thread { TfUtils.preTrain(c) }.start()
-        // TfUtils.test(c, b.fd, b.bytes)
+        // TfUtils.test(c, b.face, b.bytes)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        candidature()
     }
 
     override fun onDestroy() {
@@ -98,11 +109,13 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         super.onDestroy()
     }
 
+    private var y = 0f
+    private var lastMove: Long? = null
     override fun onTouch(v: View, ev: MotionEvent): Boolean = when (ev.action) {
         MotionEvent.ACTION_DOWN -> {
+            momenta.stop()
             y = ev.y
             lastMove = SystemClock.elapsedRealtime()
-            overdrive?.cancel()
             true
         }
         MotionEvent.ACTION_MOVE -> {
@@ -110,9 +123,9 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
             (b.start.layoutParams as ConstraintLayout.LayoutParams).verticalBias.apply {
                 val dist = y - ev.y
                 if (dist > 0f && this > minBias)
-                    move(this, true)
+                    momenta.move(true, this)
                 if (dist <= 0f && this <= maxBias)
-                    move(this, false)
+                    momenta.move(false, this)
             }
             y = ev.y
             lastMove = SystemClock.elapsedRealtime()
@@ -120,35 +133,61 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         }
         MotionEvent.ACTION_UP -> {
             lastMove = null
+            momenta.fling(speed)
             speed = 0f
-            b.bytes.text = speed.toString()
             y < 50f
         }
         else -> false
     }
 
-    private fun move(bias: Float, up: Boolean): Float {
-        var robotBias = bias
-        if (up) robotBias -= movePerMove
-        else robotBias += movePerMove
+    private val maxBias = 0.5f
+    private val minBias = 0f
+    private val movePerMove = 0.018f
+    private var speed = 0f // moves per second
+    private val momenta = object : Momentum() {
+        override fun onMove(increment: Boolean, scalar: Float): Float {
+            var robotBias = scalar
+            if (increment) robotBias -= movePerMove
+            else robotBias += movePerMove
 
-        if (robotBias < 0f) robotBias = 0f
-        if (robotBias > 0.5f) robotBias = 0.5f
-        b.start.layoutParams = (b.start.layoutParams as ConstraintLayout.LayoutParams)
-            .apply { verticalBias = robotBias }
-        ((robotBias * 1.75f) + 0.25f).apply {
-            b.start.scaleX = this
-            b.start.scaleY = this
+            if (robotBias < minBias) robotBias = minBias
+            if (robotBias > maxBias) robotBias = maxBias
+            b.start.layoutParams = (b.start.layoutParams as ConstraintLayout.LayoutParams)
+                .apply { verticalBias = robotBias }
+            ((robotBias * 1.75f) + 0.25f).apply {
+                b.start.scaleX = this
+                b.start.scaleY = this
+            }
+            b.start.translationY = ((-b.start.height * 0.25f) * (1f - (robotBias * 2f)))
+
+            b.candidature.layoutParams =
+                (b.candidature.layoutParams as ConstraintLayout.LayoutParams)
+                    .apply { matchConstraintPercentHeight = ((maxBias - robotBias) * 1.66f) }
+            ((0.5f - robotBias) * 2f).apply {
+                b.noCan.scaleX = this
+                b.noCan.scaleY = this
+            }
+            vis(b.shadow, robotBias < maxBias)
+            vis(b.bytes, robotBias >= maxBias)
+
+            return robotBias
         }
-        b.start.translationY = ((-b.start.height * 0.25f) * (1f - (robotBias * 2f)))
-
-        return robotBias
     }
 
     private fun exploring(bb: Boolean) {
         b.robot.alpha = if (bb) 1f else .36f
-        UiTools.vis(b.status, bb)
+        vis(b.status, bb)
     }
 
-    enum class Action { BYTES, STATUS }
+    private fun candidature() {
+        Thread {
+            val canNom = arrayListOf<Candidate>()
+            dao.candidates().forEach {
+                canNom.add(it.apply { nominee = dao.nomineeById(it.id) })
+            }
+            handler?.obtainMessage(Action.CANDIDATES.ordinal, canNom)?.sendToTarget()
+        }.start()
+    }
+
+    enum class Action { BYTES, STATUS, CANDIDATES, REFRESH }
 }

@@ -1,6 +1,7 @@
 package ir.mahdiparastesh.mobinaexplorer.room
 
 import android.annotation.SuppressLint
+import android.content.Context
 import androidx.room.*
 import androidx.room.Database
 import ir.mahdiparastesh.mobinaexplorer.Explorer
@@ -51,6 +52,10 @@ abstract class Database : RoomDatabase() {
     ) {
         companion object {
             const val DATABASE = "primary.db"
+
+            fun build(c: Context) = Room.databaseBuilder(
+                c, ir.mahdiparastesh.mobinaexplorer.room.Database::class.java, DATABASE
+            ).allowMainThreadQueries().build()
         }
 
         enum class Triple(val s: String) {

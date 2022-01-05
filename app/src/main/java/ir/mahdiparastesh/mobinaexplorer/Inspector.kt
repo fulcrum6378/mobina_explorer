@@ -54,6 +54,7 @@ class Inspector(private val c: Explorer, nom: Nominee) {
     private fun qualify(res: Analyzer.Results, type: String) {
         c.crawler.dao.addCandidate(Candidate(u.id!!.toLong(), res.best(), type))
         handler.obtainMessage(handler.ANALYZED).sendToTarget()
+        Panel.handler?.obtainMessage(Panel.Action.REFRESH.ordinal)?.sendToTarget()
     }
 
     private val handler = object : Handler(Looper.getMainLooper()) {

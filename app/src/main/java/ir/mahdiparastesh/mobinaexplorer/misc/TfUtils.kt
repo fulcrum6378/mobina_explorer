@@ -1,6 +1,5 @@
 package ir.mahdiparastesh.mobinaexplorer.misc
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -67,11 +66,10 @@ class TfUtils {
             bmp.recycle()
         }
 
-        @SuppressLint("SetTextI18n")
-        fun test(c: Context, iv: ImageView, tv: TextView) {
+        fun test(c: Context, iv: ImageView, tv: TextView, file: String = "1.jfif") {
             val an = Analyzer(c)
             var data: ByteArray
-            c.resources.assets.open("1.jfif").apply {
+            c.resources.assets.open(file).apply {
                 data = readBytes()
                 close()
             }

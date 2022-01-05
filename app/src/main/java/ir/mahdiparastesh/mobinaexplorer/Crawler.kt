@@ -2,7 +2,6 @@ package ir.mahdiparastesh.mobinaexplorer
 
 import android.net.TrafficStats
 import android.os.Process
-import androidx.room.Room
 import ir.mahdiparastesh.mobinaexplorer.room.Database
 import ir.mahdiparastesh.mobinaexplorer.room.Session
 import java.util.*
@@ -15,13 +14,12 @@ class Crawler(private val c: Explorer) : Thread() {
     var running = true
 
     override fun run() {
-        db = Room.databaseBuilder(c, Database::class.java, Database.DbFile.DATABASE)
-            .allowMainThreadQueries()
-            .build().also { dao = it.dao() }
+        db = Database.DbFile.build(c).also { dao = it.dao() }
         carryOn()
     }
 
     fun carryOn() {
+        if (!running) return
         val preNoms = dao.nominees()
         if (preNoms.isEmpty() || preNoms.all { it.anal })
             Inspector.search(c, proxyKeywords.random())
@@ -41,15 +39,16 @@ class Crawler(private val c: Explorer) : Thread() {
     }
 
     override fun interrupt() {
+        running = false
         session.bytes = bytesSinceBoot() - preBytes
         if (session.bytes > 0) {
             session.end = now()
             dao.addSession(session)
         }
         db.close()
-        try {
+        /*try {
             super.interrupt()
         } catch (ignored: Exception) {
-        }
+        }*/
     }
 }

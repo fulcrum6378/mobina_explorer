@@ -46,14 +46,14 @@ class Analyzer(val c: Context) {
             else detector.process(InputImage.fromBitmap(bmp, 0)).addOnSuccessListener { wryFaces ->
                 results = Results(wryFaces.size, finished, wryFaces)
                 var ff = 0
-                for (f in wryFaces.indices) TfUtils.rotate(bmp, wryFaces[f].headEulerAngleZ).apply {
+                for (f in wryFaces) TfUtils.rotate(bmp, f.headEulerAngleZ).apply {
                     detector.process(InputImage.fromBitmap(this, 0)).addOnSuccessListener { faces ->
                         if (faces.isNullOrEmpty() || ff >= faces.size)
                             results!!.result(null)
                         else {
-                            val cropped = if (faces[ff].boundingBox != wryFaces[f].boundingBox)
+                            val cropped = if (faces[ff].boundingBox != f.boundingBox)
                                 crop(this, faces[ff]) else this
-                            results!!.cropped = cropped
+                            if (results!!.cropped == null) results!!.cropped = cropped
                             results!!.result(Result(compare(cropped))) // faces[ff]
                             ff++
                         }
