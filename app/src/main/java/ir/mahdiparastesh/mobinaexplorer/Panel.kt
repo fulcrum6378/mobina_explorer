@@ -51,7 +51,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                 when (msg.what) {
                     Action.BYTES.ordinal ->
                         b.bytes.text = UiTools.bytes(c, Crawler.bytesSinceBoot())
-                    Action.STATUS.ordinal -> {
+                    Action.SIGNAL.ordinal -> {
                         b.status.text = msg.obj as String
                         b.status.setTextColor(color(c, R.color.alarm))
                         anStatus = ObjectAnimator.ofArgb(
@@ -79,12 +79,13 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         handler?.obtainMessage(Action.BYTES.ordinal)?.sendToTarget()
 
         // Control the Foreground Service
-        Explorer.active.observe(this) { b -> exploring(b) }
-        exploring(Explorer.active.value == true)
+        Explorer.state.observe(this) { s -> exploring(s) }
+        exploring(Explorer.state.value)
         b.start.setOnClickListener {
+            if (Explorer.state.value == Explorer.State.CHANGING) return@setOnClickListener
             UiTools.shake(c)
             startService(Intent(this, Explorer::class.java).apply {
-                if (Explorer.active.value == true) action = Explorer.code(Explorer.Code.STOP)
+                if (Explorer.state.value == Explorer.State.ACTIVE) action = Explorer.code(Explorer.Code.STOP)
             })
         }
         b.start.layoutParams = (b.start.layoutParams as ConstraintLayout.LayoutParams).apply {
@@ -131,12 +132,12 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
             lastMove = SystemClock.elapsedRealtime()
             true
         }
-        MotionEvent.ACTION_UP -> {
+        MotionEvent.ACTION_UP -> if (lastMove != null) {
             lastMove = null
             momenta.fling(speed)
             speed = 0f
-            y < 50f
-        }
+            (y - ev.y) < 50f
+        } else false
         else -> false
     }
 
@@ -169,14 +170,15 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
             }
             vis(b.shadow, robotBias < maxBias)
             vis(b.bytes, robotBias >= maxBias)
+            b.status.alpha = robotBias * 2f
 
             return robotBias
         }
     }
 
-    private fun exploring(bb: Boolean) {
-        b.robot.alpha = if (bb) 1f else .36f
-        vis(b.status, bb)
+    private fun exploring(state: Explorer.State?) {
+        b.robot.alpha = if (state == Explorer.State.ACTIVE) 1f else .36f
+        vis(b.status, state == Explorer.State.ACTIVE)
     }
 
     private fun candidature() {
@@ -189,5 +191,5 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         }.start()
     }
 
-    enum class Action { BYTES, STATUS, CANDIDATES, REFRESH }
+    enum class Action { BYTES, SIGNAL, CANDIDATES, REFRESH }
 }

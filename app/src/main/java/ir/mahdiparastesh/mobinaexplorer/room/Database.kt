@@ -32,7 +32,7 @@ abstract class Database : RoomDatabase() {
         @Query("SELECT * FROM nominee WHERE id LIKE :id LIMIT 1")
         fun nomineeById(id: Long): Nominee
 
-        @Insert(onConflict = OnConflictStrategy.REPLACE)
+        @Insert(onConflict = OnConflictStrategy.ABORT)
         fun addNominee(item: Nominee)
 
         @Update
@@ -42,7 +42,7 @@ abstract class Database : RoomDatabase() {
         @Query("SELECT * FROM Candidate")
         fun candidates(): List<Candidate>
 
-        @Insert(onConflict = OnConflictStrategy.REPLACE)
+        @Insert(onConflict = OnConflictStrategy.IGNORE) // DON'T REPLACE!!!
         fun addCandidate(item: Candidate)
     }
 

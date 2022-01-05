@@ -9,13 +9,16 @@ import androidx.room.PrimaryKey
 class Candidate(
     @PrimaryKey(autoGenerate = false) @ColumnInfo(name = "id") var id: Long,
     @ColumnInfo(name = "score") var score: Float,
-    @ColumnInfo(name = "photo_type") var photoType: String,
+    @ColumnInfo(name = "where") var where: String,
+    @ColumnInfo(name = "rejected") var rejected: Boolean = false,
     @Ignore var nominee: Nominee? = null
 ) {
     constructor() : this(-1, 0f, "")
 
     companion object {
-        const val TYPE_PROFILE = "P"
-        const val TYPE_POST = "%1\$s_%2\$s"
+        const val IN_PROFILE = "P"
+        const val IN_PROFILE_TEXT = "PT"
+        const val IN_POST = "%1\$s_%2\$s"
+        const val IN_POST_TEXT = "T_%1\$s_%2\$s"
     }
 }

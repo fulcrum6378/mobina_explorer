@@ -19,15 +19,22 @@ class Explorer : Service() {
     private lateinit var c: Context
     lateinit var analyzer: Analyzer
     lateinit var crawler: Crawler
+
     @Suppress("MemberVisibilityCanBePrivate")
     var handler: Handler? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        if (intent?.action != null) when (intent.action) {
-            code(Code.RESUME) -> crawler.running = true
-            code(Code.PAUSE) -> crawler.running = false
-            code(Code.STOP) -> {
+        if (intent?.action != null && state.value != State.CHANGING) when (intent.action) {
+            code(Code.RESUME) -> if (state.value == State.SLEPT) {
+                state.value = State.ACTIVE
+                crawler.running = true
+            }
+            code(Code.PAUSE) -> if (state.value == State.ACTIVE) {
+                state.value = State.SLEPT
+                crawler.running = false // TODO: This is NOT real pausing
+            }
+            code(Code.STOP) -> if (state.value == State.ACTIVE || state.value == State.SLEPT) {
                 stopForeground(true)
                 stopSelf()
             }
@@ -36,8 +43,8 @@ class Explorer : Service() {
     }
 
     override fun onCreate() {
+        state.value = State.CHANGING
         super.onCreate()
-        active.value = true
         c = applicationContext
 
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
@@ -66,22 +73,23 @@ class Explorer : Service() {
             }
         }
         crawler = Crawler(this).also { it.start() }
+        state.value = State.ACTIVE
     }
 
     override fun onDestroy() {
-        active.value = false
+        state.value = State.CHANGING
         handler = null
         crawler.interrupt()
         super.onDestroy()
         System.gc()
+        state.value = State.OFF
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-
     companion object {
         const val CH_ID = 103
-        val active = MutableLiveData(false)
+        val state = MutableLiveData(State.OFF)
 
         fun code(what: Code) = Explorer::class.java.`package`!!.name + "." + when (what) {
             Code.CHANNEL -> "EXPLORING"
@@ -97,6 +105,8 @@ class Explorer : Service() {
     }
 
     enum class Code { CHANNEL, RESUME, PAUSE, STOP }
+
+    enum class State { OFF, ACTIVE, SLEPT, CHANGING }
 
     //enum class Action { }
 }

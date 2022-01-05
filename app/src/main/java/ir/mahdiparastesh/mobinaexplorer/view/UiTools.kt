@@ -14,7 +14,7 @@ class UiTools {
         fun color(c: Context, res: Int) = ContextCompat.getColor(c, res)
 
         @Suppress("DEPRECATION")
-        fun shake(c: Context, dur: Long = 50L) {
+        fun shake(c: Context, dur: Long = 55L) {
             (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
                 (c.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager).defaultVibrator
             else c.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator)

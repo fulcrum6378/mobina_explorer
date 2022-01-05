@@ -61,7 +61,7 @@ class GraphQL(val user: User) {
 
     class Post(
         val __typename: String,
-        val accessibility_caption: Any?,
+        val accessibility_caption: String?,
         val clips_music_attribution_info: Any?,
         val coauthor_producers: Array<Any>,
         val comments_disabled: Boolean,
@@ -81,7 +81,7 @@ class GraphQL(val user: User) {
         val has_upcoming_event: Boolean,
         val id: String,
         val is_video: Boolean,
-        val location: Any?,
+        val location: Location?,
         val media_overlay_info: Any?,
         val media_preview: Any?,
         val owner: HashMap<String, String>,
@@ -105,4 +105,11 @@ class GraphQL(val user: User) {
     class EdgeTaggedUsers(val node: Array<Any>)
 
     class ThumbRes(val src: String, val config_width: Float, val config_height: Float)
+
+    class Location(
+        val id: Long,
+        val has_public_page: Boolean,
+        val name: String,
+        val slug: String
+    )
 }

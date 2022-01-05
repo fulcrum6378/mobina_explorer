@@ -9,5 +9,6 @@ class Session(
     @PrimaryKey(autoGenerate = true) var id: Long,
     @ColumnInfo(name = "start") var start: Long,
     @ColumnInfo(name = "end") var end: Long,
-    @ColumnInfo(name = "bytes") var bytes: Long
+    @ColumnInfo(name = "bytes") var bytes: Long,
+    @ColumnInfo(name = "nominees") var nominees: Long
 )

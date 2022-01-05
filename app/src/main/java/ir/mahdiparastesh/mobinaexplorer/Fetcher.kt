@@ -8,6 +8,7 @@ import com.android.volley.toolbox.HttpHeaderParser
 import com.android.volley.toolbox.Volley
 import com.google.gson.Gson
 import com.google.gson.stream.JsonReader
+import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.HUMAN_DELAY
 import java.io.InputStreamReader
 import java.util.regex.Pattern
 
@@ -17,16 +18,17 @@ class Fetcher(
     private val listener: Listener, // (String?) -> Unit
     cache: Boolean = false
 ) : Request<ByteArray>(Method.GET, encode(url), Response.ErrorListener {
+    Crawler.signal(Crawler.Signal.VOLLEY_ERROR, it.message.toString())
     Panel.handler?.obtainMessage(Panel.Action.BYTES.ordinal)?.sendToTarget()
 }) {
     init {
         setShouldCache(cache)
         tag = "fetch"
         retryPolicy = DefaultRetryPolicy(
-            20 * 1000, 1, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
+            10000, 1, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT
         )
-        while (!c.crawler.running)
-            Thread.sleep(2000L)
+        //while (!c.crawler.running)
+        //    Thread.sleep(2000L)// TODO: THINK ABOUT THIS
         Volley.newRequestQueue(c).add(this)
     }
 
@@ -38,8 +40,7 @@ class Fetcher(
 
     override fun parseNetworkResponse(response: NetworkResponse): Response<ByteArray> =
         Response.success(
-            response.data as ByteArray,
-            HttpHeaderParser.parseCacheHeaders(response)
+            response.data as ByteArray, HttpHeaderParser.parseCacheHeaders(response)
         )
 
     class Listener(private val finish: OnFinished) : Response.Listener<ByteArray> {
@@ -73,6 +74,10 @@ class Fetcher(
     }
 
     class Delayer(private val onFinished: OnFinished) : CountDownTimer(HUMAN_DELAY, HUMAN_DELAY) {
+        init {
+            start()
+        }
+
         override fun onTick(millisUntilFinished: Long) {}
         override fun onFinish() {
             onFinished.finish()
@@ -81,11 +86,9 @@ class Fetcher(
         fun interface OnFinished {
             fun finish()
         }
-    }// SystemClock.elapsedRealtime()
+    }
 
     companion object {
-        const val HUMAN_DELAY = 7000L
-
         fun encode(uriString: String): String {
             if (TextUtils.isEmpty(uriString)) return uriString
             val allowedUrlCharacters = Pattern.compile(
