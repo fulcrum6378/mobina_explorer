@@ -22,4 +22,22 @@ class Candidate(
         const val IN_POST = "%1\$s_%2\$s"
         const val IN_POST_TEXT = "T_%1\$s_%2\$s"
     }
+
+    class Sort(private val by: Int) : Comparator<Candidate>{
+        companion object {
+            const val BY_SCORE = 0
+            const val BY_REJECTED = 1
+            const val BY_NOM_NAME = 2
+            const val BY_NOM_USER = 3
+        }
+
+        override fun compare(a: Candidate, b: Candidate) = when (by) {
+            BY_REJECTED -> comBool(a.rejected) - comBool(b.rejected)
+            BY_NOM_NAME -> a.nominee!!.name.compareTo(b.nominee!!.name)
+            BY_NOM_USER -> a.nominee!!.user.compareTo(b.nominee!!.user)
+            else -> (a.score - b.score).toInt()
+        }
+
+        private fun comBool(b: Boolean): Int = if (b) 1 else 0
+    }
 }

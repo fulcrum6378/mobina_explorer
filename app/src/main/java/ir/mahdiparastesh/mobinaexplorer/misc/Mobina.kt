@@ -1,7 +1,8 @@
-package ir.mahdiparastesh.mobinaexplorer
+package ir.mahdiparastesh.mobinaexplorer.misc
 
 import android.content.Context
 import android.graphics.Bitmap
+import ir.mahdiparastesh.mobinaexplorer.Analyzer
 
 @Suppress("unused")
 class Mobina(private val c: Context) {

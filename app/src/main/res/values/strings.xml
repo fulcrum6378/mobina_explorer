@@ -11,4 +11,5 @@
         <item>mg</item>
         <item>gb</item>
     </string-array>
+    <string name="cmReject">Reject</string>
 </resources>

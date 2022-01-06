@@ -24,7 +24,7 @@ class Crawler(private val c: Explorer) : Thread() {
     override fun run() {
         running = true
         session = Session(0, now(), 0, 0L, 0L)
-        handling = HandlerThread(Explorer.Code.CRAWLER_HANDLING.s).also { it.start() }
+        handling = HandlerThread(Explorer.Code.CRW_HANDLING.s).also { it.start() }
         handler = object : Handler(handling.looper) {
             override fun handleMessage(msg: Message) {
                 when (msg.what) {
@@ -108,19 +108,19 @@ class Crawler(private val c: Explorer) : Thread() {
     }
 
     companion object {
+        var handler: Handler? = null
         const val HANDLE_VOLLEY = 0
         const val HANDLE_ML_KIT = 1
         const val HANDLE_INTERRUPT = 2
-        var handler: Handler? = null
+
+        fun signal(status: Signal, vararg s: String) {
+            Explorer.handler.obtainMessage(Explorer.HANDLE_STATUS, status.s.format(*s))
+                .sendToTarget()
+        }
 
         fun bytesSinceBoot() = TrafficStats.getUidTxBytes(Process.myUid())
 
         fun now() = Calendar.getInstance().timeInMillis
-
-        fun signal(status: Signal, vararg s: String) {
-            Panel.handler?.obtainMessage(Panel.Action.SIGNAL.ordinal, status.s.format(*s))
-                ?.sendToTarget()
-        }
 
         fun maxPosts(prx: Proximity) = when (prx) {
             Proximity.MIN_PROXIMITY -> 12
@@ -136,7 +136,7 @@ class Crawler(private val c: Explorer) : Thread() {
             else -> 0
         }
 
-        const val HUMAN_DELAY = 6000L
+        const val HUMAN_DELAY = 5000L
         val proximity = arrayOf("rasht", "resht", "gilan", "رشت", "گیلان")
         val keywords = arrayOf("mobina", "مبینا", "1379", "79", "2000")
     }

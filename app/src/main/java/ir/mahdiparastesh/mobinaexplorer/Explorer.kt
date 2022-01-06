@@ -7,7 +7,10 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
+import android.os.Message
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.MutableLiveData
 
@@ -60,6 +63,13 @@ class Explorer : Service() {
             addAction(0, c.resources.getString(R.string.notif_stop), pi(c, Code.STOP))
         }.build())
 
+        handler = object : Handler(Looper.myLooper()!!) {
+            override fun handleMessage(msg: Message) {
+                when (msg.what) {
+                    HANDLE_STATUS -> status.value = msg.obj as String
+                }
+            }
+        }
         analyzer = Analyzer(c)
         crawler = Crawler(this).also { it.start() }
         state.value = State.ACTIVE
@@ -78,6 +88,9 @@ class Explorer : Service() {
     companion object {
         const val CH_ID = 103
         val state = MutableLiveData(State.OFF)
+        val status = MutableLiveData(Crawler.Signal.OFF.s)
+        lateinit var handler: Handler
+        const val HANDLE_STATUS = 0
 
         fun packageName(): String = Explorer::class.java.`package`!!.name
 
@@ -89,7 +102,7 @@ class Explorer : Service() {
 
     enum class Code(val s: String) {
         CHANNEL("${packageName()}.EXPLORING"),
-        CRAWLER_HANDLING("${packageName()}.CRAWLER_HANDLING"),
+        CRW_HANDLING("${packageName()}.HANDLING"),
         RESUME("${packageName()}.ACTION_RESUME"),
         PAUSE("${packageName()}.ACTION_PAUSE"),
         STOP("${packageName()}.ACTION_STOP"),

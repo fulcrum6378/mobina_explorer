@@ -50,24 +50,11 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                 when (msg.what) {
                     Action.BYTES.ordinal ->
                         b.bytes.text = UiTools.bytes(c, Crawler.bytesSinceBoot())
-                    Action.SIGNAL.ordinal -> {
-                        b.status.text = msg.obj as String
-                        b.status.setTextColor(color(c, R.color.alarm))
-                        anStatus = ObjectAnimator.ofArgb(
-                            b.status, "textColor",
-                            color(c, R.color.alarm), color(c, R.color.CPO)
-                        ).apply {
-                            duration = 1000L
-                            addListener(object : AnimatorListenerAdapter() {
-                                override fun onAnimationEnd(animation: Animator?) {
-                                    anStatus = null
-                                }
-                            })
-                            start()
-                        }
-                    }
                     Action.CANDIDATES.ordinal -> {
                         val canNom = msg.obj as List<Candidate>
+                        canNom.sortedWith(Candidate.Sort(Candidate.Sort.BY_NOM_NAME))
+                        canNom.sortedWith(Candidate.Sort(Candidate.Sort.BY_SCORE))
+                        canNom.sortedWith(Candidate.Sort(Candidate.Sort.BY_REJECTED))
                         b.candidature.adapter = ListUser(canNom, this@Panel)
                         vis(b.noCan, canNom.isEmpty())
                     }
@@ -90,6 +77,21 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         b.start.layoutParams = (b.start.layoutParams as ConstraintLayout.LayoutParams).apply {
             matchConstraintPercentHeight =
                 (dm.widthPixels.toFloat() / dm.heightPixels) * matchConstraintPercentWidth
+        }
+        Explorer.status.observe(this) { s ->
+            b.status.text = s
+            b.status.setTextColor(color(c, R.color.alarm))
+            anStatus = ObjectAnimator.ofArgb(
+                b.status, "textColor", color(c, R.color.alarm), color(c, R.color.CPO)
+            ).apply {
+                duration = 1000L
+                addListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: Animator?) {
+                        anStatus = null
+                    }
+                })
+                start()
+            }
         }
 
         // Candidates
@@ -192,5 +194,5 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         }.start()
     }
 
-    enum class Action { BYTES, SIGNAL, CANDIDATES, REFRESH }
+    enum class Action { BYTES, CANDIDATES, REFRESH }
 }
