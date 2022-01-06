@@ -7,10 +7,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
-import android.os.Message
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.MutableLiveData
 
@@ -20,21 +17,18 @@ class Explorer : Service() {
     lateinit var analyzer: Analyzer
     lateinit var crawler: Crawler
 
-    @Suppress("MemberVisibilityCanBePrivate")
-    var handler: Handler? = null
-
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         if (intent?.action != null && state.value != State.CHANGING) when (intent.action) {
-            code(Code.RESUME) -> if (state.value == State.SLEPT) {
+            Code.RESUME.s -> if (state.value == State.SLEPT) {
                 state.value = State.ACTIVE
                 crawler.running = true
             }
-            code(Code.PAUSE) -> if (state.value == State.ACTIVE) {
+            Code.PAUSE.s -> if (state.value == State.ACTIVE) {
                 state.value = State.SLEPT
                 crawler.running = false // TODO: This is NOT real pausing
             }
-            code(Code.STOP) -> if (state.value == State.ACTIVE || state.value == State.SLEPT) {
+            Code.STOP.s -> if (state.value == State.ACTIVE || state.value == State.SLEPT) {
                 stopForeground(true)
                 stopSelf()
             }
@@ -50,10 +44,10 @@ class Explorer : Service() {
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
             .createNotificationChannel(
                 NotificationChannel(
-                    code(Code.CHANNEL), c.resources.getString(R.string.notif_channel),
+                    Code.CHANNEL.s, c.resources.getString(R.string.notif_channel),
                     NotificationManager.IMPORTANCE_HIGH
                 ).apply { description = c.resources.getString(R.string.notif_channel_desc) })
-        startForeground(CH_ID, NotificationCompat.Builder(c, code(Code.CHANNEL)).apply {
+        startForeground(CH_ID, NotificationCompat.Builder(c, Code.CHANNEL.s).apply {
             setSmallIcon(R.mipmap.launcher_round)
             setContentTitle(c.resources.getString(R.string.notif_title))
             setOngoing(true)
@@ -67,18 +61,12 @@ class Explorer : Service() {
         }.build())
 
         analyzer = Analyzer(c)
-        handler = object : Handler(Looper.getMainLooper()) {
-            override fun handleMessage(msg: Message) {
-                //when (msg.what) { }
-            }
-        }
         crawler = Crawler(this).also { it.start() }
         state.value = State.ACTIVE
     }
 
     override fun onDestroy() {
         state.value = State.CHANGING
-        handler = null
         crawler.interrupt()
         super.onDestroy()
         System.gc()
@@ -91,22 +79,21 @@ class Explorer : Service() {
         const val CH_ID = 103
         val state = MutableLiveData(State.OFF)
 
-        fun code(what: Code) = Explorer::class.java.`package`!!.name + "." + when (what) {
-            Code.CHANNEL -> "EXPLORING"
-            Code.RESUME -> "ACTION_RESUME"
-            Code.PAUSE -> "ACTION_PAUSE"
-            Code.STOP -> "ACTION_STOP"
-        }
+        fun packageName(): String = Explorer::class.java.`package`!!.name
 
         fun pi(c: Context, code: Code): PendingIntent = PendingIntent.getService(
-            c, 0, Intent(c, Explorer::class.java).apply { action = code(code) },
+            c, 0, Intent(c, Explorer::class.java).apply { action = code.s },
             PendingIntent.FLAG_CANCEL_CURRENT
         )
     }
 
-    enum class Code { CHANNEL, RESUME, PAUSE, STOP }
+    enum class Code(val s: String) {
+        CHANNEL("${packageName()}.EXPLORING"),
+        CRAWLER_HANDLING("${packageName()}.CRAWLER_HANDLING"),
+        RESUME("${packageName()}.ACTION_RESUME"),
+        PAUSE("${packageName()}.ACTION_PAUSE"),
+        STOP("${packageName()}.ACTION_STOP"),
+    }
 
     enum class State { OFF, ACTIVE, SLEPT, CHANGING }
-
-    //enum class Action { }
 }

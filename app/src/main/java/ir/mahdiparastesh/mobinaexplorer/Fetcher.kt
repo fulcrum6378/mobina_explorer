@@ -3,13 +3,13 @@ package ir.mahdiparastesh.mobinaexplorer
 import android.net.Uri
 import android.os.CountDownTimer
 import android.text.TextUtils
-import com.android.volley.*
+import com.android.volley.DefaultRetryPolicy
+import com.android.volley.NetworkResponse
+import com.android.volley.Request
+import com.android.volley.Response
 import com.android.volley.toolbox.HttpHeaderParser
 import com.android.volley.toolbox.Volley
-import com.google.gson.Gson
-import com.google.gson.stream.JsonReader
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.HUMAN_DELAY
-import java.io.InputStreamReader
 import java.util.regex.Pattern
 
 class Fetcher(
@@ -34,11 +34,9 @@ class Fetcher(
         Volley.newRequestQueue(c).add(this)
     }
 
-    override fun getHeaders(): HashMap<String, String> = Gson().fromJson(
-        JsonReader(InputStreamReader(c.resources.assets.open("headers.json"))), HashMap::class.java
-    )
+    override fun getHeaders(): HashMap<String, String> = c.crawler.headers
 
-    override fun getBody(): ByteArray = body?.encodeToByteArray() ?: super.getBody()
+    override fun getBody(): ByteArray = encode(body)?.encodeToByteArray() ?: super.getBody()
 
     override fun deliverResponse(response: ByteArray) = listener.onResponse(response)
 
@@ -47,14 +45,20 @@ class Fetcher(
             response.data as ByteArray, HttpHeaderParser.parseCacheHeaders(response)
         )
 
-    class Listener(private val finish: OnFinished) : Response.Listener<ByteArray> {
+    class Listener(private val listener: OnFinished) : Response.Listener<ByteArray> {
         override fun onResponse(response: ByteArray) {
             Panel.handler?.obtainMessage(Panel.Action.BYTES.ordinal)?.sendToTarget()
-            finish.onFinished(response)
+            Transit(listener, response)
         }
 
         fun interface OnFinished {
             fun onFinished(response: ByteArray)
+        }
+
+        class Transit(val listener: OnFinished, val response: ByteArray) {
+            init {
+                Crawler.handler?.obtainMessage(Crawler.HANDLE_VOLLEY, this)?.sendToTarget()
+            }
         }
     }
 
@@ -88,7 +92,8 @@ class Fetcher(
     }
 
     companion object {
-        fun encode(uriString: String): String {
+        fun encode(uriString: String?): String? {
+            if (uriString == null) return null
             if (TextUtils.isEmpty(uriString)) return uriString
             val allowedUrlCharacters = Pattern.compile(
                 "([A-Za-z0-9_.~:/?\\#\\[\\]@!$&'()*+,;" + "=-]|%[0-9a-fA-F]{2})+"

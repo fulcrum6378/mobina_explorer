@@ -28,8 +28,8 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
     private lateinit var c: Context
     private lateinit var b: MainBinding
     private var anStatus: ObjectAnimator? = null
-    private lateinit var db: Database
-    private lateinit var dao: Database.DAO
+    private var db: Database? = null
+    private var dao: Database.DAO? = null
     private lateinit var dm: DisplayMetrics
 
     companion object {
@@ -41,7 +41,6 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         b = MainBinding.inflate(layoutInflater)
         setContentView(b.root)
         c = applicationContext
-        db = Database.DbFile.build(c).also { dao = it.dao() }
         dm = resources.displayMetrics
 
         // Handler
@@ -85,7 +84,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
             if (Explorer.state.value == Explorer.State.CHANGING) return@setOnClickListener
             UiTools.shake(c)
             startService(Intent(this, Explorer::class.java).apply {
-                if (Explorer.state.value == Explorer.State.ACTIVE) action = Explorer.code(Explorer.Code.STOP)
+                if (Explorer.state.value == Explorer.State.ACTIVE) action = Explorer.Code.STOP.s
             })
         }
         b.start.layoutParams = (b.start.layoutParams as ConstraintLayout.LayoutParams).apply {
@@ -183,11 +182,13 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
 
     private fun candidature() {
         Thread {
+            db = Database.DbFile.build(c).also { dao = it.dao() }
             val canNom = arrayListOf<Candidate>()
-            dao.candidates().forEach {
-                canNom.add(it.apply { nominee = dao.nomineeById(it.id) })
+            dao?.candidates()?.forEach {
+                canNom.add(it.apply { nominee = dao?.nomineeById(it.id) })
             }
             handler?.obtainMessage(Action.CANDIDATES.ordinal, canNom)?.sendToTarget()
+            db?.close()
         }.start()
     }
 

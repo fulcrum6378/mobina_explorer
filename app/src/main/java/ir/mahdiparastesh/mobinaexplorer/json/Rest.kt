@@ -22,7 +22,7 @@ open class Rest(val status: String) {
 
     open class GraphQLResponse(val data: GraphQL, status: String) : Rest(status)
 
-    class Friendships(val friendships: HashMap<String, Friendship>, status: String) : Rest(status)
+    class Friendships(val friendship_statuses: HashMap<String, Friendship>, status: String) : Rest(status)
 
     class Friendship(
         val following: Boolean,

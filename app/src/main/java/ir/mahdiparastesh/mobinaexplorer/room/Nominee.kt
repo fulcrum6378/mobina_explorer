@@ -13,21 +13,22 @@ class Nominee(
     @PrimaryKey(autoGenerate = false) @ColumnInfo(name = "id") var id: Long,
     @ColumnInfo(name = "user") var user: String,
     @ColumnInfo(name = "name") var name: String,
-    @ColumnInfo(name = "accs") var accs: Boolean,
+    @ColumnInfo(name = "accs") var accs: Boolean, // Is their profile accessible?
     @ColumnInfo(name = "step") var step: Byte,
-    @ColumnInfo(name = "anal") var anal: Boolean,
-    @ColumnInfo(name = "fllw") var fllw: Boolean,
+    @ColumnInfo(name = "anal") var anal: Boolean, // Has their profile been analyzed?
+    @ColumnInfo(name = "fllw") var fllw: Boolean, // Are their followers/following fetched?
 ) {
     @Suppress("unused")
     constructor() : this(-1, "", "", false, -1, false, false)
 
     fun proximity(): Proximity = when {
-        step <= MIN_PROXIMITY.max!! -> MIN_PROXIMITY
-        step <= MED_PROXIMITY.max!! -> MED_PROXIMITY
         step <= MAX_PROXIMITY.max!! -> MAX_PROXIMITY
+        step <= MED_PROXIMITY.max!! -> MED_PROXIMITY
+        step <= MIN_PROXIMITY.max!! -> MIN_PROXIMITY
         else -> OUT_OF_REACH
     }
 
-    fun maxPosts() =
-        if (proximity().max != null) Crawler.MAX_POSTS_FACTOR / proximity().max!! else 0
+    fun maxPosts() = Crawler.maxPosts(proximity())
+
+    fun maxFollow() = Crawler.maxFollow(proximity())
 }

@@ -36,15 +36,15 @@ class Analyzer(val c: Context) {
         }
     }
 
-    inner class Subject(bmp: Bitmap?, private val finished: OnFinished) {
+    inner class Subject(bmp: Bitmap?, private val listener: OnFinished) {
         private var results: Results? = null
 
-        constructor(bar: ByteArray, finished: OnFinished) : this(barToBmp(bar), finished)
+        constructor(bar: ByteArray, listener: OnFinished) : this(barToBmp(bar), listener)
 
         init {
-            if (bmp == null) finished.onFinished(null)
+            if (bmp == null) Transit(listener, null)
             else detector.process(InputImage.fromBitmap(bmp, 0)).addOnSuccessListener { wryFaces ->
-                results = Results(wryFaces.size, finished, wryFaces)
+                results = Results(wryFaces.size, listener, wryFaces)
                 var ff = 0
                 for (f in wryFaces) TfUtils.rotate(bmp, f.headEulerAngleZ).apply {
                     detector.process(InputImage.fromBitmap(this, 0)).addOnSuccessListener { faces ->
@@ -52,20 +52,27 @@ class Analyzer(val c: Context) {
                             results!!.result(null)
                         else {
                             val cropped = if (faces[ff].boundingBox != f.boundingBox)
-                                crop(this, faces[ff]) else this
-                            if (results!!.cropped == null) results!!.cropped = cropped
-                            results!!.result(Result(compare(cropped))) // faces[ff]
+                                try {
+                                    crop(this, faces[ff])
+                                } catch (ignored: IllegalArgumentException) {
+                                    null // x + width must be <= bitmap.width()
+                                } else this
+                            if (cropped != null) {
+                                if (results!!.cropped == null) results!!.cropped = cropped
+                                results!!.result(Result(compare(cropped))) // faces[ff]
+                            }
                             ff++
                         }
                     }.addOnFailureListener { results!!.result(null) }
                 }
-            }.addOnFailureListener { finished.onFinished(null) }
+            }.addOnFailureListener { Transit(listener, null) }
         }
 
         private fun crop(raw: Bitmap, f: Face): Bitmap = Bitmap.createBitmap(
             raw, f.boundingBox.left, f.boundingBox.top,
-            f.boundingBox.bottom - f.boundingBox.top,
-            f.boundingBox.right - f.boundingBox.left
+            f.boundingBox.right - f.boundingBox.left,
+            f.boundingBox.bottom - f.boundingBox.top
+
         )
 
         private fun compare(cropped: Bitmap): FloatArray {
@@ -114,13 +121,13 @@ class Analyzer(val c: Context) {
         var cropped: Bitmap? = null
 
         init {
-            if (expect == 0) listener.onFinished(this)
+            if (expect == 0) Transit(listener, this)
         }
 
         fun result(e: Result?) {
             reality++
             if (e != null) add(e)
-            if (reality == expect) listener.onFinished(this)
+            if (reality == expect) Transit(listener, this)
         }
 
         fun anyQualified() = any { it.qualified }
@@ -134,6 +141,12 @@ class Analyzer(val c: Context) {
         var like: Int = prob.indexOfFirst { it == max(prob.toList()) },
         var qualified: Boolean = like == 0 && prob[0] > CANDIDATURE
     )
+
+    class Transit(val listener: OnFinished, val results: Results?) {
+        init {
+            Crawler.handler?.obtainMessage(Crawler.HANDLE_ML_KIT, this)?.sendToTarget()
+        }
+    }
 
     companion object {
         val MODEL = Models.PLURAL

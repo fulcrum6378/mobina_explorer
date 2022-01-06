@@ -53,9 +53,9 @@ abstract class Database : RoomDatabase() {
         companion object {
             const val DATABASE = "primary.db"
 
-            fun build(c: Context) = Room.databaseBuilder(
+            fun build(c: Context, mainThread: Boolean = false) = Room.databaseBuilder(
                 c, ir.mahdiparastesh.mobinaexplorer.room.Database::class.java, DATABASE
-            ).allowMainThreadQueries().build()
+            ).apply { if (mainThread) allowMainThreadQueries() }.build()
         }
 
         enum class Triple(val s: String) {
