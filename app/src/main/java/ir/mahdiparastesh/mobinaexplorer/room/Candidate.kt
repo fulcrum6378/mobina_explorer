@@ -13,6 +13,7 @@ class Candidate(
     @ColumnInfo(name = "rejected") var rejected: Boolean = false,
     @Ignore var nominee: Nominee? = null
 ) {
+    @Suppress("unused")
     constructor() : this(-1, 0f, "")
 
     companion object {

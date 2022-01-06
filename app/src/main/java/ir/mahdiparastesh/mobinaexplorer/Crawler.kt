@@ -35,27 +35,13 @@ class Crawler(private val c: Explorer) : Thread() {
         try {
             dao.addNominee(nominee)
         } catch (ignored: SQLiteConstraintException) {
-            dao.updateNominee(nominee.apply { anal = dao.nomineeById(nominee.id).anal })
+            dao.updateNominee(nominee.apply {
+                val older = dao.nomineeById(nominee.id)
+                anal = older.anal
+                if (older.accs == accs) fllw = older.fllw
+            })
         }
         session.nominees += 1L
-    }
-
-    companion object {
-        const val MAX_PROXIMITY = 5
-        const val MAX_POSTS = 12
-        const val MAX_FOLLOW = 1000
-        const val HUMAN_DELAY = 7000L
-        val proximity = arrayOf("rasht", "resht", "gilan", "رشت", "گیلان")
-        val keywords = arrayOf("mobina", "مبینا", "1379", "79", "2000")
-
-        fun bytesSinceBoot() = TrafficStats.getUidTxBytes(Process.myUid())
-
-        fun now() = Calendar.getInstance().timeInMillis
-
-        fun signal(status: Signal, vararg s: String) {
-            Panel.handler?.obtainMessage(Panel.Action.SIGNAL.ordinal, status.s.format(*s))
-                ?.sendToTarget()
-        }
     }
 
     override fun interrupt() {
@@ -88,5 +74,29 @@ class Crawler(private val c: Explorer) : Thread() {
         FOLLOWING_W("Waiting before fetching %1\$s's following (%2\$s)..."),
         QUALIFIED("%s was QUALIFIED!!!"),
         RESTING("Let's have a rest, please...")
+    }
+
+    companion object {
+        const val MAX_FOLLOW = 1000L // Only for MAX_PROXIMITY
+        const val MAX_POSTS_FACTOR = 108 // /= PROXIMITY
+        const val HUMAN_DELAY = 7000L
+        val proximity = arrayOf("rasht", "resht", "gilan", "رشت", "گیلان")
+        val keywords = arrayOf("mobina", "مبینا", "1379", "79", "2000")
+
+        fun bytesSinceBoot() = TrafficStats.getUidTxBytes(Process.myUid())
+
+        fun now() = Calendar.getInstance().timeInMillis
+
+        fun signal(status: Signal, vararg s: String) {
+            Panel.handler?.obtainMessage(Panel.Action.SIGNAL.ordinal, status.s.format(*s))
+                ?.sendToTarget()
+        }
+    }
+
+    enum class Proximity(val max: Int?) {
+        MIN_PROXIMITY(3), // {0, 1, 2, 3} All followers/following will be nominated
+        MED_PROXIMITY(6), // {4, 5, 6} All followers/following will be searched
+        MAX_PROXIMITY(9), // {7, 8, 9} Some followers/following will be searched
+        OUT_OF_REACH(null) // 10+ step followers/following won't be fetched
     }
 }

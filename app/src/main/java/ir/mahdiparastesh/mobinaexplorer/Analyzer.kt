@@ -78,6 +78,7 @@ class Analyzer(val c: Context) {
             return output[0]
         }
 
+        @Suppress("unused")
         fun show(cl: ConstraintLayout, w: Int, h: Int) {
             if (results == null) return
             cl.removeAllViews()
@@ -137,7 +138,7 @@ class Analyzer(val c: Context) {
     companion object {
         val MODEL = Models.PLURAL
         const val MODEL_SIZE = 224
-        const val CANDIDATURE = 0.5f
+        const val CANDIDATURE = 0.08f
 
         fun barToBmp(bar: ByteArray?): Bitmap? =
             if (bar != null) BitmapFactory.decodeByteArray(bar, 0, bar.size) else null

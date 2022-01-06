@@ -21,4 +21,16 @@ open class Rest(val status: String) {
     )
 
     open class GraphQLResponse(val data: GraphQL, status: String) : Rest(status)
+
+    class Friendships(val friendships: HashMap<String, Friendship>, status: String) : Rest(status)
+
+    class Friendship(
+        val following: Boolean,
+        val incoming_request: Boolean,
+        val is_bestie: Boolean,
+        val is_private: Boolean,
+        val is_restricted: Boolean,
+        val outgoing_request: Boolean,
+        val is_feed_favorite: Boolean,
+    )
 }

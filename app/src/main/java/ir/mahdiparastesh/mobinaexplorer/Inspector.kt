@@ -3,12 +3,13 @@ package ir.mahdiparastesh.mobinaexplorer
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
+import com.android.volley.Request
 import com.google.gson.Gson
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MAX_FOLLOW
-import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MAX_POSTS
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.keywords
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.proximity
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.signal
+import ir.mahdiparastesh.mobinaexplorer.Crawler.Proximity.*
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Signal
 import ir.mahdiparastesh.mobinaexplorer.Fetcher.Type
 import ir.mahdiparastesh.mobinaexplorer.json.Follow
@@ -18,6 +19,7 @@ import ir.mahdiparastesh.mobinaexplorer.json.Rest
 import ir.mahdiparastesh.mobinaexplorer.json.Search
 import ir.mahdiparastesh.mobinaexplorer.room.Candidate
 import ir.mahdiparastesh.mobinaexplorer.room.Nominee
+import java.lang.IllegalStateException
 import java.util.*
 
 class Inspector(private val c: Explorer, val nom: Nominee) {
@@ -29,12 +31,6 @@ class Inspector(private val c: Explorer, val nom: Nominee) {
         signal(Signal.INSPECTING, nom.user)
         Fetcher(c, Type.PROFILE.url.format(nom.user), Fetcher.Listener { html ->
             if (!c.crawler.running) return@Listener
-            /*Fetcher(c, Type.HUMAN_CSS1.url, true) {}
-            Fetcher(c, Type.HUMAN_CSS2.url, true) {}
-            Fetcher(c, Type.HUMAN_CSS3.url, true) {}
-            Fetcher(c, Type.HUMAN_CSS4.url, true) {}
-            Fetcher(c, Type.HUMAN_CSS5.url, true) {}*/
-
             val cnf = Fetcher.decode(html).substringAfter(preConfig).substringBefore(posConfig)
             try {
                 u = Gson().fromJson(cnf, PageConfig::class.java).entry_data.ProfilePage[0]
@@ -83,24 +79,32 @@ class Inspector(private val c: Explorer, val nom: Nominee) {
         override fun handleMessage(msg: Message) {
             when (msg.what) {
                 ANALYZED -> {
-                    c.crawler.dao.updateNominee(nom.apply { anal = true })
-                    if (nom.step < Crawler.MAX_PROXIMITY && u.is_private == false) {
+                    nom.anal = true
+                    c.crawler.dao.updateNominee(nom)
+                    if (nom.accs && nom.proximity() != OUT_OF_REACH) {
                         signal(Signal.FOLLOWERS_W, u.username.toString(), "0")
-                        Fetcher.Delayer { allFollow(Type.FOLLOWERS, mutableListOf()) }
-                    } else Fetcher.Delayer {
-                        signal(Signal.RESTING, u.username.toString())
-                        c.crawler.carryOn()
-                    }
+                        Fetcher.Delayer { allFollow(Type.FOLLOWERS, mutableListOf(), hashMapOf()) }
+                    } else bye()
                 }
                 FOLLOWERS -> {
+                    val res = msg.obj as List<Any>
+                    addFollow(res[0] as List<Rest.User>, res[1] as HashMap<String, Rest.Friendship>)
                     signal(Signal.FOLLOWING_W, u.username.toString(), "0")
-                    Fetcher.Delayer { allFollow(Type.FOLLOWING, mutableListOf()) }
+                    Fetcher.Delayer { allFollow(Type.FOLLOWING, mutableListOf(), hashMapOf()) }
                 }
-                FOLLOWING -> Fetcher.Delayer {
-                    signal(Signal.RESTING, u.username.toString())
-                    c.crawler.carryOn()
+                FOLLOWING -> {
+                    val res = msg.obj as List<Any>
+                    addFollow(res[0] as List<Rest.User>, res[1] as HashMap<String, Rest.Friendship>)
+                    bye()
                 }
             }
+        }
+
+        private fun bye() = Fetcher.Delayer {
+            nom.fllw = true
+            c.crawler.dao.updateNominee(nom)
+            signal(Signal.RESTING, u.username.toString())
+            c.crawler.carryOn()
         }
     }
 
@@ -113,7 +117,7 @@ class Inspector(private val c: Explorer, val nom: Nominee) {
             return
         }
 
-        if (!timeline.page_info.has_next_page || allPosts.size >= MAX_POSTS)
+        if (!timeline.page_info.has_next_page || allPosts.size >= nom.maxPosts())
             handler.obtainMessage(handler.ANALYZED).sendToTarget()
         else Fetcher.Delayer {
             signal(Signal.RESUME_POSTS, u.username.toString(), allPosts.size.toString())
@@ -159,37 +163,69 @@ class Inspector(private val c: Explorer, val nom: Nominee) {
         resumePosts(null)
     }
 
-    private fun allFollow(type: Type, list: MutableList<Rest.User>, next_max_id: String = "") {
+    @Suppress("LABEL_NAME_CLASH")
+    private fun allFollow(
+        type: Type,
+        list: MutableList<Rest.User>,
+        friends: HashMap<String, Rest.Friendship>,
+        next_max_id: String = ""
+    ) {
         if (!c.crawler.running) return
         signal(
             if (type == Type.FOLLOWERS) Signal.FOLLOWERS else Signal.FOLLOWING,
             u.username.toString(), list.size.toString()
         )
-        Fetcher(c, type.url.format(u.id, next_max_id), Fetcher.Listener { str ->
-            val json = Gson().fromJson(Fetcher.decode(str), Follow::class.java)
-            addFollow(json.users.toMutableList())
-            list.addAll(json.users.toMutableList())
-            if (json.next_max_id != null && list.size < MAX_FOLLOW) {
-                signal(
-                    if (type == Type.FOLLOWERS) Signal.FOLLOWERS_W else Signal.FOLLOWING_W,
-                    u.username.toString(), list.size.toString()
-                )
-                Fetcher.Delayer { allFollow(type, list, json.next_max_id) }
-            } else handler.obtainMessage(type.ordinal, list).sendToTarget()
+        Fetcher(c, type.url.format(u.id, next_max_id), Fetcher.Listener { flw ->
+            val json = Gson().fromJson(Fetcher.decode(flw), Follow::class.java)
+            Fetcher(
+                c, Type.FRIENDSHIPS.url, Fetcher.Listener { friendship ->
+                    if (!c.crawler.running) return@Listener
+                    friends.putAll(
+                        Gson().fromJson(
+                            Fetcher.decode(friendship), Rest.Friendships::class.java
+                        ).friendships
+                    )
+
+                    list.addAll(json.users.toMutableList())
+                    if (json.next_max_id == null || (nom.proximity() == MAX_PROXIMITY && list.size < MAX_FOLLOW))
+                        handler.obtainMessage(type.ordinal, listOf(list, friends))
+                            .sendToTarget()
+                    else {
+                        signal(
+                            if (type == Type.FOLLOWERS) Signal.FOLLOWERS_W else Signal.FOLLOWING_W,
+                            u.username.toString(), list.size.toString()
+                        )
+                        Fetcher.Delayer { allFollow(type, list, friends, json.next_max_id) }
+                    }
+                }, true, Request.Method.POST,
+                json.users.joinToString(friendIdSeparator) { it.pk }
+            )
         })
     }
 
-    private fun addFollow(list: List<Rest.User>) {
-        list.forEach {
+    private fun addFollow(list: List<Rest.User>, fs: HashMap<String, Rest.Friendship>) {
+        when (nom.proximity()) {
+            MIN_PROXIMITY -> list
+            MED_PROXIMITY, MAX_PROXIMITY ->
+                list.filter { preferredFollow(it, true) || preferredFollow(it, false) }
+            else -> throw IllegalStateException(
+                "While adding followers/following, \"nom\"\'s " +
+                        "proximity must only be one of MIN_PROXIMITY, MED_PROXIMITY or MAX_PROXIMITY."
+            )
+        }.forEach {
+            val acs = !it.is_private || fs[it.pk]?.following == true
             c.crawler.nominate(
                 Nominee(
-                    it.pk.toLong(), it.username,
-                    it.full_name, it.is_private,
-                    nom.step, false
+                    it.pk.toLong(), it.username, it.full_name, acs,
+                    (if (preferredFollow(it, true)) 0 else nom.step + 1).toByte(),
+                    false, acs
                 )
             )
         }
     }
+
+    private fun preferredFollow(ru: Rest.User, prx: Boolean) =
+        searchScopes(prx, ru.username, ru.full_name)
 
     private fun searchScopes(prx: Boolean, vararg scopes: String?): Boolean {
         var ret = false
@@ -210,26 +246,34 @@ class Inspector(private val c: Explorer, val nom: Nominee) {
         const val preConfig = "<script type=\"text/javascript\">window._sharedData = "
         const val posConfig = ";</script>"
         const val hash = "8c2a529969ee035a5063f2fc8602a0fd"
+        private const val friendIdSeparator = "%2C"
 
-        //const val preLib = "<link rel=\"preload\" href=\"/static/bundles/es6/ConsumerLibCommons.js/"
-        //const val posLib = ".js\""
-        //const val preHash = "o.pagination},queryId:\""
-        //const val posHash = "\""
-
+        @Suppress("LABEL_NAME_CLASH")
         fun search(c: Explorer, word: String) = Fetcher(c, Type.SEARCH.url.format(word),
-            Fetcher.Listener { str ->
+            Fetcher.Listener { search ->
                 if (!c.crawler.running) return@Listener
-                for (x in Gson().fromJson(
-                    Fetcher.decode(str),
-                    Search::class.java
-                ).users.toMutableList()
-                    .also { it.sortWith(Search.ItemUser.Sort()) }) c.crawler.nominate(
-                    Nominee(
-                        x.user.pk.toLong(), x.user.username, x.user.full_name, x.user.is_private,
-                        0, false
-                    )
+                val users = Gson().fromJson(Fetcher.decode(search), Search::class.java)
+                    .users.toMutableList()
+                    .also { it.sortWith(Search.ItemUser.Sort()) }
+                Fetcher(
+                    c, Type.FRIENDSHIPS.url, Fetcher.Listener { friendship ->
+                        if (!c.crawler.running) return@Listener
+                        val fs = Gson().fromJson(
+                            Fetcher.decode(friendship), Rest.Friendships::class.java
+                        ).friendships
+                        for (x in users) {
+                            val acs = !x.user.is_private || fs[x.user.pk]?.following == true
+                            c.crawler.nominate(
+                                Nominee(
+                                    x.user.pk.toLong(), x.user.username, x.user.full_name,
+                                    acs, 0, false, acs
+                                )
+                            )
+                        }
+                        c.crawler.carryOn()
+                    }, true, Request.Method.POST,
+                    users.joinToString(friendIdSeparator) { it.user.pk }
                 )
-                c.crawler.carryOn()
             })
     }
 }

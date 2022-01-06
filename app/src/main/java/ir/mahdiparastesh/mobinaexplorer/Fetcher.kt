@@ -16,8 +16,10 @@ class Fetcher(
     private val c: Explorer,
     url: String,
     private val listener: Listener, // (String?) -> Unit
-    cache: Boolean = false
-) : Request<ByteArray>(Method.GET, encode(url), Response.ErrorListener {
+    cache: Boolean = false,
+    method: Int = Method.GET,
+    private val body: String? = null
+) : Request<ByteArray>(method, encode(url), Response.ErrorListener {
     Crawler.signal(Crawler.Signal.VOLLEY_ERROR, it.message.toString())
     Panel.handler?.obtainMessage(Panel.Action.BYTES.ordinal)?.sendToTarget()
 }) {
@@ -35,6 +37,8 @@ class Fetcher(
     override fun getHeaders(): HashMap<String, String> = Gson().fromJson(
         JsonReader(InputStreamReader(c.resources.assets.open("headers.json"))), HashMap::class.java
     )
+
+    override fun getBody(): ByteArray = body?.encodeToByteArray() ?: super.getBody()
 
     override fun deliverResponse(response: ByteArray) = listener.onResponse(response)
 
@@ -59,18 +63,13 @@ class Fetcher(
 
         FOLLOWERS("https://i.instagram.com/api/v1/friendships/%1\$s/followers/?max_id=%2\$s"),
         FOLLOWING("https://i.instagram.com/api/v1/friendships/%1\$s/following/?max_id=%2\$s"),
+        FRIENDSHIPS("https://i.instagram.com/api/v1/friendships/show_many/"),
 
         PROFILE("https://www.instagram.com/%s"),
         POSTS(
             "https://www.instagram.com/graphql/query/?query_hash=%1\$s&variables=" +
                     "{\"id\":\"%2\$s\",\"first\":%3\$s,\"after\":\"%4\$s\"}"
         ),
-
-        HUMAN_CSS1("https://www.instagram.com/static/bundles/es6/ConsumerUICommons.css/9a93ba50dadf.css"),
-        HUMAN_CSS2("https://www.instagram.com/static/bundles/es6/Consumer.css/dfb83c4afa7c.css"),
-        HUMAN_CSS3("https://www.instagram.com/static/bundles/es6/ProfilePageContainer.css/1ce4034b37cb.css"),
-        HUMAN_CSS4("https://www.instagram.com/static/bundles/es6/ConsumerUICommons.css/9a93ba50dadf.css"),
-        HUMAN_CSS5("https://www.instagram.com/static/bundles/es6/Consumer.css/dfb83c4afa7c.css"),
     }
 
     class Delayer(private val onFinished: OnFinished) : CountDownTimer(HUMAN_DELAY, HUMAN_DELAY) {
