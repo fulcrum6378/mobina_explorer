@@ -33,6 +33,7 @@ class Inspector(private val c: Explorer, val nom: Nominee) {
                 handler.obtainMessage(handler.ANALYZED).sendToTarget()
                 return@Listener
             }
+            Crawler.un = nom.user
 
             val cnf = Fetcher.decode(html).substringAfter(preConfig).substringBefore(posConfig)
             try {
@@ -68,9 +69,8 @@ class Inspector(private val c: Explorer, val nom: Nominee) {
 
     private fun qualify(score: Float, type: String) {
         signal(Signal.QUALIFIED, nom.user)
-        dao.addCandidate(Candidate(nom.id, score, type))
         handler.obtainMessage(handler.ANALYZED).sendToTarget()
-        Panel.handler?.obtainMessage(Panel.Action.REFRESH.ordinal)?.sendToTarget()
+        c.crawler.candidate(Candidate(nom.id, score, type))
     }
 
     private val handler = object : Handler(c.crawler.handling.looper) {
@@ -149,7 +149,7 @@ class Inspector(private val c: Explorer, val nom: Nominee) {
             resumePosts(null)
             return
         }
-        signal(Signal.ANALYZE_POST, nom.user, ((allPosts.size - 12) + i + 1).toString())
+        signal(Signal.ANALYZE_POST, nom.user, "${analyzedPosts + 1}")
 
         val scopes = arrayOf(
             timeline.edges[i].node.accessibility_caption,

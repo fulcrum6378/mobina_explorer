@@ -55,12 +55,16 @@ class Analyzer(val c: Context) {
                                 try {
                                     crop(this, faces[ff])
                                 } catch (ignored: IllegalArgumentException) {
+                                    c.openFileOutput("fuck.txt", Context.MODE_PRIVATE).apply {
+                                        write(Crawler.un.encodeToByteArray()) // TODO
+                                        close()
+                                    }
                                     null // x + width must be <= bitmap.width()
                                 } else this
                             if (cropped != null) {
                                 if (results!!.cropped == null) results!!.cropped = cropped
                                 results!!.result(Result(compare(cropped))) // faces[ff]
-                            }
+                            } else results!!.result(null)
                             ff++
                         }
                     }.addOnFailureListener { results!!.result(null) }
@@ -70,9 +74,7 @@ class Analyzer(val c: Context) {
 
         private fun crop(raw: Bitmap, f: Face): Bitmap = Bitmap.createBitmap(
             raw, f.boundingBox.left, f.boundingBox.top,
-            f.boundingBox.right - f.boundingBox.left,
-            f.boundingBox.bottom - f.boundingBox.top
-
+            f.boundingBox.width(), f.boundingBox.height()
         )
 
         private fun compare(cropped: Bitmap): FloatArray {
@@ -139,11 +141,14 @@ class Analyzer(val c: Context) {
     class Result(
         val prob: FloatArray,
         var like: Int = prob.indexOfFirst { it == max(prob.toList()) },
-        var qualified: Boolean = like == 0 && prob[0] > CANDIDATURE
+        var qualified: Boolean = prob[0] > CANDIDATURE // like == 0 &&
     )
 
     class Transit(val listener: OnFinished, val results: Results?) {
         init {
+            /*if (!results.isNullOrEmpty()) Log.println(Log.DEBUG, "ANALYZER",
+                "${Crawler.un} =>${Gson().toJson(Models.PLURAL.labels[results[0].like])}: " +
+                    "${results[0].prob[results[0].like]}")*/
             Crawler.handler?.obtainMessage(Crawler.HANDLE_ML_KIT, this)?.sendToTarget()
         }
     }

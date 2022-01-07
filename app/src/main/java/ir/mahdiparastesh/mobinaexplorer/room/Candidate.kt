@@ -32,12 +32,12 @@ class Candidate(
         }
 
         override fun compare(a: Candidate, b: Candidate) = when (by) {
-            BY_REJECTED -> comBool(a.rejected) - comBool(b.rejected)
+            BY_REJECTED -> bb(a.rejected) - bb(b.rejected)
             BY_NOM_NAME -> a.nominee!!.name.compareTo(b.nominee!!.name)
             BY_NOM_USER -> a.nominee!!.user.compareTo(b.nominee!!.user)
             else -> (a.score - b.score).toInt()
         }
 
-        private fun comBool(b: Boolean): Int = if (b) 1 else 0
+        private fun bb(b: Boolean) = if (b) 1 else 0
     }
 }

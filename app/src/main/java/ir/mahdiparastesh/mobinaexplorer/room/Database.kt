@@ -42,8 +42,14 @@ abstract class Database : RoomDatabase() {
         @Query("SELECT * FROM Candidate")
         fun candidates(): List<Candidate>
 
-        @Insert(onConflict = OnConflictStrategy.IGNORE) // DON'T REPLACE!!!
+        @Query("SELECT * FROM candidate WHERE id LIKE :id LIMIT 1")
+        fun candidate(id: Long): Candidate
+
+        @Insert(onConflict = OnConflictStrategy.IGNORE) // NEVER REPLACE!!!
         fun addCandidate(item: Candidate)
+
+        @Update
+        fun updateCandidate(item: Candidate)
     }
 
     @SuppressLint("SdCardPath")

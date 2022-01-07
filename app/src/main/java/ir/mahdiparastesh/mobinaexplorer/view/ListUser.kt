@@ -32,7 +32,7 @@ class ListUser(private val list: List<Candidate>, private val that: Panel) :
         h.b.name.text = "${i + 1}. ${list[i].nominee?.name} ($scr)"
         h.b.user.text = list[i].nominee?.user
 
-        if (list[i].rejected) h.b.root.alpha = rejectedAlpha
+        h.b.root.alpha = if (list[i].rejected) rejectedAlpha else 1f
         h.b.root.setOnClickListener {
             val uri =
                 Uri.parse(Fetcher.Type.PROFILE.url.format(list[h.layoutPosition].nominee?.user))
@@ -43,6 +43,7 @@ class ListUser(private val list: List<Candidate>, private val that: Panel) :
                 setOnMenuItemClickListener {
                     when (it.itemId) {
                         R.id.cmReject -> {
+                            UiWork(that, Panel.Action.REJECT, list[h.layoutPosition]).start()
                             true
                         }
                         else -> false

@@ -3,9 +3,13 @@ package ir.mahdiparastesh.mobinaexplorer
 import android.database.sqlite.SQLiteConstraintException
 import android.icu.util.Calendar
 import android.net.TrafficStats
-import android.os.*
+import android.os.Handler
+import android.os.HandlerThread
+import android.os.Message
+import android.os.Process
 import com.google.gson.Gson
 import com.google.gson.stream.JsonReader
+import ir.mahdiparastesh.mobinaexplorer.room.Candidate
 import ir.mahdiparastesh.mobinaexplorer.room.Database
 import ir.mahdiparastesh.mobinaexplorer.room.Nominee
 import ir.mahdiparastesh.mobinaexplorer.room.Session
@@ -20,6 +24,10 @@ class Crawler(private val c: Explorer) : Thread() {
     private val preBytes = bytesSinceBoot()
     private var inspection: Inspector? = null
     var running = false
+
+    init {
+        priority = MAX_PRIORITY
+    }
 
     override fun run() {
         running = true
@@ -47,6 +55,13 @@ class Crawler(private val c: Explorer) : Thread() {
             HashMap::class.java
         )
         carryOn()
+
+        /*inspection = Inspector(
+            c, Nominee(
+                1025813715L, "queenyinanna", "Q U E E N Y \uD83D\uDC09\uD83D\uDC05",
+                true, 10, anal = false, fllw = true
+            )
+        )*/
     }
 
     fun carryOn() {
@@ -72,6 +87,18 @@ class Crawler(private val c: Explorer) : Thread() {
                 if (older.accs == accs) fllw = older.fllw
             })
         }
+    }
+
+    fun candidate(candidate: Candidate) {
+        try {
+            dao.addCandidate(candidate)
+        } catch (ignored: SQLiteConstraintException) {
+            dao.updateCandidate(candidate.apply {
+                val older = dao.candidate(candidate.id)
+                rejected = older.rejected
+            })
+        }
+        Panel.handler?.obtainMessage(Panel.Action.REFRESH.ordinal)?.sendToTarget()
     }
 
     override fun interrupt() {
@@ -112,6 +139,7 @@ class Crawler(private val c: Explorer) : Thread() {
         const val HANDLE_VOLLEY = 0
         const val HANDLE_ML_KIT = 1
         const val HANDLE_INTERRUPT = 2
+        var un = ""
 
         fun signal(status: Signal, vararg s: String) {
             Explorer.handler.obtainMessage(Explorer.HANDLE_STATUS, status.s.format(*s))

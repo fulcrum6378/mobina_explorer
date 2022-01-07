@@ -14,12 +14,12 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import ir.mahdiparastesh.mobinaexplorer.databinding.MainBinding
 import ir.mahdiparastesh.mobinaexplorer.room.Candidate
-import ir.mahdiparastesh.mobinaexplorer.room.Database
 import ir.mahdiparastesh.mobinaexplorer.view.ListUser
 import ir.mahdiparastesh.mobinaexplorer.view.Momentum
 import ir.mahdiparastesh.mobinaexplorer.view.UiTools
 import ir.mahdiparastesh.mobinaexplorer.view.UiTools.Companion.color
 import ir.mahdiparastesh.mobinaexplorer.view.UiTools.Companion.vis
+import ir.mahdiparastesh.mobinaexplorer.view.UiWork
 
 // adb connect 192.168.1.20:
 
@@ -28,9 +28,9 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
     private lateinit var c: Context
     private lateinit var b: MainBinding
     private var anStatus: ObjectAnimator? = null
-    private var db: Database? = null
-    private var dao: Database.DAO? = null
     private lateinit var dm: DisplayMetrics
+    private var candidature: ArrayList<Candidate>? = null
+    private var canScroll = 0
 
     companion object {
         var handler: Handler? = null
@@ -45,20 +45,27 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
 
         // Handler
         handler = object : Handler(Looper.getMainLooper()) {
+            @SuppressLint("NotifyDataSetChanged")
             @Suppress("UNCHECKED_CAST")
             override fun handleMessage(msg: Message) {
                 when (msg.what) {
                     Action.BYTES.ordinal ->
                         b.bytes.text = UiTools.bytes(c, Crawler.bytesSinceBoot())
                     Action.CANDIDATES.ordinal -> {
-                        val canNom = msg.obj as List<Candidate>
-                        canNom.sortedWith(Candidate.Sort(Candidate.Sort.BY_NOM_NAME))
-                        canNom.sortedWith(Candidate.Sort(Candidate.Sort.BY_SCORE))
-                        canNom.sortedWith(Candidate.Sort(Candidate.Sort.BY_REJECTED))
-                        b.candidature.adapter = ListUser(canNom, this@Panel)
-                        vis(b.noCan, canNom.isEmpty())
+                        val scr = canScroll
+                        candidature = ArrayList(msg.obj as List<Candidate>)
+                        sortList()
+                        b.candidature.adapter = ListUser(candidature!!, this@Panel)
+                        vis(b.noCan, candidature!!.isEmpty())
+                        if (candidature!!.isNotEmpty()) b.candidature.scrollBy(0, scr)
                     }
                     Action.REFRESH.ordinal -> candidature()
+                    Action.REJECT.ordinal -> (msg.obj as Candidate).apply {
+                        if (candidature == null) return@apply
+                        candidature!![candidature!!.indexOf(this)] = this
+                        sortList()
+                        b.candidature.adapter?.notifyDataSetChanged()
+                    }
                 }
             }
         }
@@ -96,7 +103,13 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
 
         // Candidates
         b.root.setOnTouchListener(this)
+        b.candidature.viewTreeObserver.addOnScrollChangedListener {
+            canScroll = b.candidature.computeVerticalScrollOffset()
+        }
 
+        /*UiWork(c, Action.CUSTOM_WORK, UiWork.CustomWork { dao ->
+            dao.nominees().forEach { dao.updateNominee(it.apply { anal = false }) }
+        }).start()*/
         // Thread { TfUtils.preTrain(c) }.start()
         // TfUtils.test(c, b.face, b.bytes)
     }
@@ -183,16 +196,15 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
     }
 
     private fun candidature() {
-        Thread {
-            db = Database.DbFile.build(c).also { dao = it.dao() }
-            val canNom = arrayListOf<Candidate>()
-            dao?.candidates()?.forEach {
-                canNom.add(it.apply { nominee = dao?.nomineeById(it.id) })
-            }
-            handler?.obtainMessage(Action.CANDIDATES.ordinal, canNom)?.sendToTarget()
-            db?.close()
-        }.start()
+        UiWork(c, Action.CANDIDATES).start()
     }
 
-    enum class Action { BYTES, CANDIDATES, REFRESH }
+    private fun sortList() {
+        if (candidature == null) return
+        candidature!!.sortWith(Candidate.Sort(Candidate.Sort.BY_NOM_NAME))
+        candidature!!.sortWith(Candidate.Sort(Candidate.Sort.BY_SCORE))
+        candidature!!.sortWith(Candidate.Sort(Candidate.Sort.BY_REJECTED))
+    }
+
+    enum class Action { CANDIDATES, REJECT, BYTES, REFRESH, CUSTOM_WORK }
 }
