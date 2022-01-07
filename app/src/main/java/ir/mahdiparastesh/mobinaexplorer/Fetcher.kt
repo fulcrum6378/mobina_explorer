@@ -22,6 +22,7 @@ class Fetcher(
 ) : Request<ByteArray>(method, encode(url), Response.ErrorListener {
     Crawler.signal(Crawler.Signal.VOLLEY_ERROR, it.message.toString())
     Panel.handler?.obtainMessage(Panel.Action.BYTES.ordinal)?.sendToTarget()
+    Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
 }) {
     init {
         setShouldCache(cache)

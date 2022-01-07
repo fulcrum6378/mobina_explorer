@@ -35,9 +35,11 @@ class Candidate(
             BY_REJECTED -> bb(a.rejected) - bb(b.rejected)
             BY_NOM_NAME -> a.nominee!!.name.compareTo(b.nominee!!.name)
             BY_NOM_USER -> a.nominee!!.user.compareTo(b.nominee!!.user)
-            else -> (a.score - b.score).toInt()
+            else -> ii(b.score) - ii(a.score)
         }
 
         private fun bb(b: Boolean) = if (b) 1 else 0
+
+        private fun ii(i: Float): Int = (if (i == -1f) i else i * 100f).toInt()
     }
 }

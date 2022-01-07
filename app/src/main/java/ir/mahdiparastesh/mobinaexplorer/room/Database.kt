@@ -45,7 +45,7 @@ abstract class Database : RoomDatabase() {
         @Query("SELECT * FROM candidate WHERE id LIKE :id LIMIT 1")
         fun candidate(id: Long): Candidate
 
-        @Insert(onConflict = OnConflictStrategy.IGNORE) // NEVER REPLACE!!!
+        @Insert(onConflict = OnConflictStrategy.ABORT)
         fun addCandidate(item: Candidate)
 
         @Update

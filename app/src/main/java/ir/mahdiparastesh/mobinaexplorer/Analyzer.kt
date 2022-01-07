@@ -15,7 +15,6 @@ import org.tensorflow.lite.Interpreter
 import java.io.FileInputStream
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
-import java.util.Collections.max
 import kotlin.math.abs
 
 class Analyzer(val c: Context) {
@@ -52,19 +51,10 @@ class Analyzer(val c: Context) {
                             results!!.result(null)
                         else {
                             val cropped = if (faces[ff].boundingBox != f.boundingBox)
-                                try {
-                                    crop(this, faces[ff])
-                                } catch (ignored: IllegalArgumentException) {
-                                    c.openFileOutput("fuck.txt", Context.MODE_PRIVATE).apply {
-                                        write(Crawler.un.encodeToByteArray()) // TODO
-                                        close()
-                                    }
-                                    null // x + width must be <= bitmap.width()
-                                } else this
-                            if (cropped != null) {
-                                if (results!!.cropped == null) results!!.cropped = cropped
-                                results!!.result(Result(compare(cropped))) // faces[ff]
-                            } else results!!.result(null)
+                                crop(this, faces[ff])
+                            else this
+                            // if (results!!.cropped == null) results!!.cropped = cropped
+                            results!!.result(Result(compare(cropped)))
                             ff++
                         }
                     }.addOnFailureListener { results!!.result(null) }
@@ -73,8 +63,14 @@ class Analyzer(val c: Context) {
         }
 
         private fun crop(raw: Bitmap, f: Face): Bitmap = Bitmap.createBitmap(
-            raw, f.boundingBox.left, f.boundingBox.top,
-            f.boundingBox.width(), f.boundingBox.height()
+            raw, if (f.boundingBox.left < 0) 0 else f.boundingBox.left,
+            if (f.boundingBox.top < 0) 0 else f.boundingBox.top,
+            if (f.boundingBox.left + f.boundingBox.width() < raw.width)
+                f.boundingBox.width()
+            else raw.width - f.boundingBox.left,
+            if (f.boundingBox.top + f.boundingBox.height() < raw.height)
+                f.boundingBox.height()
+            else raw.height - f.boundingBox.top,
         )
 
         private fun compare(cropped: Bitmap): FloatArray {
@@ -134,15 +130,14 @@ class Analyzer(val c: Context) {
 
         fun anyQualified() = any { it.qualified }
 
-        @Suppress("NestedLambdaShadowedImplicitParameter")
-        fun best() = filter { it.qualified }.maxOf { it.prob[it.like] }
+        fun mobina() = filter { it.qualified }.maxOf { it.prob[0] }
     }
 
     class Result(
-        val prob: FloatArray,
-        var like: Int = prob.indexOfFirst { it == max(prob.toList()) },
-        var qualified: Boolean = prob[0] > CANDIDATURE // like == 0 &&
-    )
+        val prob: FloatArray, var qualified: Boolean = prob[0] > CANDIDATURE
+    ) {
+        // fun alike() = prob.indexOfFirst { it == max(prob.toList()) }
+    }
 
     class Transit(val listener: OnFinished, val results: Results?) {
         init {

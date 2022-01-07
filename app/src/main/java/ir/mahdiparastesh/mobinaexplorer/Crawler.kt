@@ -46,6 +46,7 @@ class Crawler(private val c: Explorer) : Thread() {
                     }
                     HANDLE_ML_KIT -> (msg.obj as Analyzer.Transit)
                         .apply { listener.onFinished(results) }
+                    HANDLE_ERROR -> carryOn()
                 }
             }
         }
@@ -55,13 +56,7 @@ class Crawler(private val c: Explorer) : Thread() {
             HashMap::class.java
         )
         carryOn()
-
-        /*inspection = Inspector(
-            c, Nominee(
-                1025813715L, "queenyinanna", "Q U E E N Y \uD83D\uDC09\uD83D\uDC05",
-                true, 10, anal = false, fllw = true
-            )
-        )*/
+        //inspection = Inspector(c, dao.nominee(""), true)
     }
 
     fun carryOn() {
@@ -139,6 +134,7 @@ class Crawler(private val c: Explorer) : Thread() {
         const val HANDLE_VOLLEY = 0
         const val HANDLE_ML_KIT = 1
         const val HANDLE_INTERRUPT = 2
+        const val HANDLE_ERROR = 3
         var un = ""
 
         fun signal(status: Signal, vararg s: String) {

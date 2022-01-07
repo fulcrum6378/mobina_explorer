@@ -17,7 +17,7 @@ import ir.mahdiparastesh.mobinaexplorer.room.Database
 import ir.mahdiparastesh.mobinaexplorer.room.Nominee
 import java.util.*
 
-class Inspector(private val c: Explorer, val nom: Nominee) {
+class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean = false) {
     private var db: Database
     private var dao: Database.DAO
     private lateinit var u: User
@@ -29,7 +29,7 @@ class Inspector(private val c: Explorer, val nom: Nominee) {
         db = Database.DbFile.build(c).also { dao = it.dao() }
         Fetcher(c, Type.PROFILE.url.format(nom.user), Fetcher.Listener { html ->
             if (!c.crawler.running) return@Listener
-            if (nom.anal) {
+            if (nom.anal && !forceAnalyze) {
                 handler.obtainMessage(handler.ANALYZED).sendToTarget()
                 return@Listener
             }
@@ -41,13 +41,17 @@ class Inspector(private val c: Explorer, val nom: Nominee) {
                     .graphql.user
             } catch (e: Exception) { // JsonSyntaxException
                 signal(Signal.SIGNED_OUT)
+                namusanSignedOut++
+                if (namusanSignedOut < 7)
+                    Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
+                else namusanSignedOut = 0
                 return@Listener
             }
             timeline = u.edge_owner_to_timeline_media!!
             val scopes = arrayOf(u.username, u.full_name, u.biography)
             if (searchScopes(true, *scopes)) revertProximity()
             if (searchScopes(false, *scopes)) {
-                qualify(-1f, Candidate.IN_PROFILE_TEXT)
+                qualify(null, Candidate.IN_PROFILE_TEXT)
                 return@Listener
             }
 
@@ -60,17 +64,17 @@ class Inspector(private val c: Explorer, val nom: Nominee) {
                     if (c.crawler.running) c.analyzer.Subject(img) { res ->
                         if (res.isNullOrEmpty() || !res.anyQualified())
                             resumePosts(timeline.edges)
-                        else qualify(res.best(), Candidate.IN_PROFILE)
+                        else qualify(res, Candidate.IN_PROFILE)
                     }
                 })
             } else resumePosts(timeline.edges)
         })
     }
 
-    private fun qualify(score: Float, type: String) {
+    private fun qualify(res: Analyzer.Results?, type: String) {
         signal(Signal.QUALIFIED, nom.user)
         handler.obtainMessage(handler.ANALYZED).sendToTarget()
-        c.crawler.candidate(Candidate(nom.id, score, type))
+        c.crawler.candidate(Candidate(nom.id, res?.mobina() ?: -1f, type))
     }
 
     private val handler = object : Handler(c.crawler.handling.looper) {
@@ -149,7 +153,6 @@ class Inspector(private val c: Explorer, val nom: Nominee) {
             resumePosts(null)
             return
         }
-        signal(Signal.ANALYZE_POST, nom.user, "${analyzedPosts + 1}")
 
         val scopes = arrayOf(
             timeline.edges[i].node.accessibility_caption,
@@ -158,7 +161,7 @@ class Inspector(private val c: Explorer, val nom: Nominee) {
         if (searchScopes(true, *scopes))
             revertProximity()
         if (searchScopes(false, *scopes)) {
-            qualify(-1f, Candidate.IN_POST_TEXT)
+            qualify(null, Candidate.IN_POST_TEXT)
             return
         }
 
@@ -167,6 +170,7 @@ class Inspector(private val c: Explorer, val nom: Nominee) {
 
     private var analyzedPosts = 0
     private fun analPost(i: Int, slides: Array<ThumbRes>, ii: Int = 0) {
+        // "i" is NOT the same as "analyzedPosts"
         if (!c.crawler.running) return
         if (analyzedPosts > nom.maxPosts()) {
             handler.obtainMessage(handler.ANALYZED).sendToTarget()
@@ -176,10 +180,11 @@ class Inspector(private val c: Explorer, val nom: Nominee) {
             analLot(i + 1)
             return
         }
+        signal(Signal.ANALYZE_POST, nom.user, "${analyzedPosts + 1}")
         Fetcher(c, slides[ii].src, Fetcher.Listener { img ->
             c.analyzer.Subject(img) { res ->
                 if (!res.isNullOrEmpty() && res.anyQualified()) {
-                    qualify(res.best(), Candidate.IN_POST.format(i.toString(), ii.toString()))
+                    qualify(res, Candidate.IN_POST.format(i.toString(), ii.toString()))
                     return@Subject
                 }
                 analPost(i, slides, ii + 1)
@@ -277,6 +282,7 @@ class Inspector(private val c: Explorer, val nom: Nominee) {
         const val hash = "8c2a529969ee035a5063f2fc8602a0fd"
         private const val preFriend = "user_ids="
         private const val sepFriendId = "," //%2C
+        var namusanSignedOut = 0
 
         @Suppress("LABEL_NAME_CLASH")
         fun search(c: Explorer, word: String) = Fetcher(c, Type.SEARCH.url.format(word),
