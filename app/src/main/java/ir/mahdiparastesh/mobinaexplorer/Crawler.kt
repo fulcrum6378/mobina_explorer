@@ -46,7 +46,7 @@ class Crawler(private val c: Explorer) : Thread() {
                     }
                     HANDLE_ML_KIT -> (msg.obj as Analyzer.Transit)
                         .apply { listener.onFinished(results) }
-                    HANDLE_ERROR -> carryOn()
+                    HANDLE_ERROR -> Fetcher.Delayer { carryOn() }
                 }
             }
         }
@@ -114,8 +114,10 @@ class Crawler(private val c: Explorer) : Thread() {
     enum class Signal(val s: String) {
         OFF(""),
         VOLLEY_ERROR("Volley Error: %s"),
+        VOLLEY_NOT_WORKING("Sorry, but Volley doesn't work at all. Error: %s"),
         SEARCHING("Searching for the keyword \"%s\"..."),
         INSPECTING("Inspecting %s\'s profile..."),
+        INVALID_RESULT("Invalid result! Trying again..."),
         SIGNED_OUT("You're signed out :("),
         PROFILE_PHOTO("Analyzing %s's profile photo..."),
         START_POSTS("Found nothing :( Inspecting %s's posts..."),
@@ -135,6 +137,7 @@ class Crawler(private val c: Explorer) : Thread() {
         const val HANDLE_ML_KIT = 1
         const val HANDLE_INTERRUPT = 2
         const val HANDLE_ERROR = 3
+        const val maxTryAgain = 5
         var un = ""
 
         fun signal(status: Signal, vararg s: String) {

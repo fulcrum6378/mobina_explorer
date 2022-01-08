@@ -39,12 +39,13 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             try {
                 u = Gson().fromJson(cnf, PageConfig::class.java).entry_data.ProfilePage[0]
                     .graphql.user
+                namusanSignedOut = 0
             } catch (e: Exception) { // JsonSyntaxException
-                signal(Signal.SIGNED_OUT)
                 namusanSignedOut++
-                if (namusanSignedOut < 7)
+                if (namusanSignedOut < Crawler.maxTryAgain) {
+                    signal(Signal.INVALID_RESULT)
                     Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
-                else namusanSignedOut = 0
+                } else signal(Signal.SIGNED_OUT)
                 return@Listener
             }
             timeline = u.edge_owner_to_timeline_media!!

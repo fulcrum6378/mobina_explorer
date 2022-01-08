@@ -20,9 +20,12 @@ class Fetcher(
     method: Int = Method.GET,
     private val body: String? = null
 ) : Request<ByteArray>(method, encode(url), Response.ErrorListener {
-    Crawler.signal(Crawler.Signal.VOLLEY_ERROR, it.message.toString())
     Panel.handler?.obtainMessage(Panel.Action.BYTES.ordinal)?.sendToTarget()
-    Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
+    if (doesErrorPersist < Crawler.maxTryAgain) {
+        Crawler.signal(Crawler.Signal.VOLLEY_ERROR, it.message.toString())
+        Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
+    } else Crawler.signal(Crawler.Signal.VOLLEY_NOT_WORKING, it.message.toString())
+    doesErrorPersist++
 }) {
     init {
         setShouldCache(cache)
@@ -48,6 +51,7 @@ class Fetcher(
 
     class Listener(private val listener: OnFinished) : Response.Listener<ByteArray> {
         override fun onResponse(response: ByteArray) {
+            doesErrorPersist = 0
             Panel.handler?.obtainMessage(Panel.Action.BYTES.ordinal)?.sendToTarget()
             Transit(listener, response)
         }
@@ -93,6 +97,8 @@ class Fetcher(
     }
 
     companion object {
+        var doesErrorPersist = 0
+
         fun encode(uriString: String?): String? {
             if (uriString == null) return null
             if (TextUtils.isEmpty(uriString)) return uriString

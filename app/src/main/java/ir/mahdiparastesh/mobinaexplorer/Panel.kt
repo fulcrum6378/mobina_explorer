@@ -61,8 +61,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                     }
                     Action.REFRESH.ordinal -> candidature()
                     Action.REJECT.ordinal -> (msg.obj as Candidate).apply {
-                        if (candidature == null) return@apply
-                        candidature!![candidature!!.indexOf(this)] = this
+                        candidature?.let { it[it.indexOf(this)] = this }
                         sortList()
                         b.candidature.adapter?.notifyDataSetChanged()
                     }
@@ -200,10 +199,9 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
     }
 
     private fun sortList() {
-        if (candidature == null) return
-        candidature!!.sortWith(Candidate.Sort(Candidate.Sort.BY_NOM_NAME))
-        candidature!!.sortWith(Candidate.Sort(Candidate.Sort.BY_SCORE))
-        candidature!!.sortWith(Candidate.Sort(Candidate.Sort.BY_REJECTED))
+        candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_NOM_NAME))
+        candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_SCORE))
+        candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_REJECTED))
     }
 
     enum class Action { CANDIDATES, REJECT, BYTES, REFRESH, CUSTOM_WORK }
