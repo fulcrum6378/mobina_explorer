@@ -13,6 +13,7 @@ import ir.mahdiparastesh.mobinaexplorer.Crawler.Signal
 import ir.mahdiparastesh.mobinaexplorer.Fetcher.Type
 import ir.mahdiparastesh.mobinaexplorer.json.*
 import ir.mahdiparastesh.mobinaexplorer.json.GraphQL.*
+import ir.mahdiparastesh.mobinaexplorer.misc.Delayer
 import ir.mahdiparastesh.mobinaexplorer.room.Candidate
 import ir.mahdiparastesh.mobinaexplorer.room.Database
 import ir.mahdiparastesh.mobinaexplorer.room.Nominee
@@ -24,17 +25,24 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
     private lateinit var u: User
     private lateinit var timeline: TimelineMedia
     private val allPosts = arrayListOf<EdgePost>()
+    private val l = c.crawler.handling.looper
 
     init {
         signal(Signal.INSPECTING, nom.user)
         db = Database.DbFile.build(c).also { dao = it.dao() }
         Fetcher(c, Type.PROFILE.url.format(nom.user), Fetcher.Listener { html ->
             if (!c.crawler.running) return@Listener
+
+            val scopes = arrayListOf(nom.user)
+            if (searchScopes(true, *scopes.toTypedArray())) revertProximity()
+            if (searchScopes(false, *scopes.toTypedArray())) {
+                qualify(null, Candidate.IN_PROFILE_TEXT)
+                return@Listener
+            }
             if (nom.anal && !forceAnalyze) {
                 handler.obtainMessage(handler.ANALYZED).sendToTarget()
                 return@Listener
             }
-            // Crawler.un = nom.user
 
             val cnf = Fetcher.decode(html).substringAfter(preConfig).substringBefore(posConfig)
             try {
@@ -50,9 +58,11 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                 return@Listener
             }
             timeline = u.edge_owner_to_timeline_media!!
-            val scopes = arrayOf(u.username, u.full_name, u.biography)
-            if (searchScopes(true, *scopes)) revertProximity()
-            if (searchScopes(false, *scopes)) {
+
+            scopes.add(u.full_name)
+            scopes.add(u.biography ?: "")
+            if (searchScopes(true, *scopes.toTypedArray())) revertProximity()
+            if (searchScopes(false, *scopes.toTypedArray())) {
                 qualify(null, Candidate.IN_PROFILE_TEXT)
                 return@Listener
             }
@@ -94,14 +104,20 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                     }
                     if (nom.accs && nom.proximity() != OUT_OF_REACH && !nom.fllw) {
                         signal(Signal.FOLLOWERS_W, nom.user, "0")
-                        Fetcher.Delayer { allFollow(Type.FOLLOWERS, mutableListOf(), hashMapOf()) }
+                        Delayer(l) { allFollow(Type.FOLLOWERS, mutableListOf(), hashMapOf()) }
                     } else bye()
                 }
                 FOLLOWERS -> {
                     val res = msg.obj as List<Any>
                     addFollow(res[0] as List<Rest.User>, res[1] as HashMap<String, Rest.Friendship>)
                     signal(Signal.FOLLOWING_W, nom.user, "0")
-                    Fetcher.Delayer { allFollow(Type.FOLLOWING, mutableListOf(), hashMapOf()) }
+                    Delayer(c.crawler.handling.looper) {
+                        allFollow(
+                            Type.FOLLOWING,
+                            mutableListOf(),
+                            hashMapOf()
+                        )
+                    }
                 }
                 FOLLOWING -> {
                     val res = msg.obj as List<Any>
@@ -115,7 +131,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             nom.fllw = true
             dao.updateNominee(nom)
             signal(Signal.RESTING, nom.user)
-            Fetcher.Delayer { Fetcher.Delayer { c.crawler.carryOn() } }
+            Delayer(l) { Delayer(l) { c.crawler.carryOn() } }
         }
     }
 
@@ -135,7 +151,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             return
         }
         signal(Signal.RESUME_POSTS, nom.user, allPosts.size.toString())
-        Fetcher.Delayer {
+        Delayer(l) {
             if (c.crawler.running) Fetcher(c,
                 Type.POSTS.url.format(hash, nom.id, allPosts.size, timeline.page_info.end_cursor),
                 Fetcher.Listener { graphQl ->
@@ -187,15 +203,15 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             return
         }
         signal(Signal.ANALYZE_POST, nom.user, "${analyzedPosts + 1}", "${ii + 1}")
-        Fetcher(c, slides[ii], Fetcher.Listener { img ->
-            c.analyzer.Subject(img) { res ->
-                if (!res.isNullOrEmpty() && res.anyQualified()) {
-                    qualify(res, Candidate.IN_POST.format(analyzedPosts, ii))
-                    return@Subject
+        Delayer(l) {
+            Fetcher(c, slides[ii], Fetcher.Listener { img ->
+                c.analyzer.Subject(img) { res ->
+                    if (!res.isNullOrEmpty() && res.anyQualified())
+                        qualify(res, Candidate.IN_POST.format(analyzedPosts, ii))
+                    else analSlide(i, slides, ii + 1)
                 }
-                analSlide(i, slides, ii + 1)
-            }
-        })
+            })
+        }
     }
 
     @Suppress("LABEL_NAME_CLASH")
@@ -229,7 +245,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                             if (type == Type.FOLLOWERS) Signal.FOLLOWERS_W else Signal.FOLLOWING_W,
                             nom.user, list.size.toString()
                         )
-                        Fetcher.Delayer { allFollow(type, list, friends, json.next_max_id) }
+                        Delayer(l) { allFollow(type, list, friends, json.next_max_id) }
                     }
                 }, true, Request.Method.POST,
                 preFriend + json.users.joinToString(sepFriendId) { it.pk }

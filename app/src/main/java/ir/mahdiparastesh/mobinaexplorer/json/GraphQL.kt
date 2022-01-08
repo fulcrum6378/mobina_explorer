@@ -26,7 +26,7 @@ class GraphQL(val user: User) {
         val fbid: String?,
         val followed_by_viewer: Boolean?,
         val follows_viewer: Boolean?,
-        val full_name: String?,
+        val full_name: String,
         val has_ar_effects: Boolean?,
         val has_blocked_viewer: Boolean?,
         val has_channel: Boolean?,
@@ -35,7 +35,7 @@ class GraphQL(val user: User) {
         val has_requested_viewer: Boolean?,
         val hide_like_and_view_counts: Boolean?,
         val highlight_reel_count: Float?,
-        val id: String?, // The same as Rest.User.pk
+        val id: String, // The same as Rest.User.pk
         val is_business_account: Boolean?,
         val is_embeds_disabled: Boolean?,
         val is_joined_recently: Boolean?,
@@ -50,7 +50,7 @@ class GraphQL(val user: User) {
         val restricted_by_viewer: Boolean?,
         val should_show_category: Boolean?,
         val should_show_public_contacts: Boolean?,
-        val username: String?,
+        val username: String
     )
 
     class TimelineMedia(val page_info: PageInfo, val count: Float, val edges: Array<EdgePost>)

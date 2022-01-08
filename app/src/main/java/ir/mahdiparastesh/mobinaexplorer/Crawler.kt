@@ -9,6 +9,7 @@ import android.os.Message
 import android.os.Process
 import com.google.gson.Gson
 import com.google.gson.stream.JsonReader
+import ir.mahdiparastesh.mobinaexplorer.misc.Delayer
 import ir.mahdiparastesh.mobinaexplorer.room.Candidate
 import ir.mahdiparastesh.mobinaexplorer.room.Database
 import ir.mahdiparastesh.mobinaexplorer.room.Nominee
@@ -46,7 +47,7 @@ class Crawler(private val c: Explorer) : Thread() {
                     }
                     HANDLE_ML_KIT -> (msg.obj as Analyzer.Transit)
                         .apply { listener.onFinished(results) }
-                    HANDLE_ERROR -> Fetcher.Delayer { carryOn() }
+                    HANDLE_ERROR -> Delayer(handling.looper) { carryOn() }
                     HANDLE_STOP -> c.stopSelf()
                 }
             }
@@ -140,7 +141,6 @@ class Crawler(private val c: Explorer) : Thread() {
         const val HANDLE_ERROR = 3
         const val HANDLE_STOP = 4
         const val maxTryAgain = 2
-        // var un = ""
 
         fun signal(status: Signal, vararg s: String) {
             Explorer.handler.obtainMessage(Explorer.HANDLE_STATUS, status.s.format(*s))
@@ -168,7 +168,7 @@ class Crawler(private val c: Explorer) : Thread() {
         }
 
         const val MAX_SLIDES = 5
-        const val HUMAN_DELAY = 7500L
+        const val HUMAN_DELAY = 5000L
         val proximity = arrayOf("rasht", "resht", "gilan", "رشت", "گیلان")
         val keywords = arrayOf("mobina", "مبینا", "1379", "79", "2000")
     }

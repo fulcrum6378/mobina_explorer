@@ -1,7 +1,6 @@
 package ir.mahdiparastesh.mobinaexplorer
 
 import android.net.Uri
-import android.os.CountDownTimer
 import android.text.TextUtils
 import com.android.volley.DefaultRetryPolicy
 import com.android.volley.NetworkResponse
@@ -9,13 +8,12 @@ import com.android.volley.Request
 import com.android.volley.Response
 import com.android.volley.toolbox.HttpHeaderParser
 import com.android.volley.toolbox.Volley
-import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.HUMAN_DELAY
 import java.util.regex.Pattern
 
 class Fetcher(
     private val c: Explorer,
     url: String,
-    private val listener: Listener, // (String?) -> Unit
+    private val listener: Listener,
     cache: Boolean = false,
     method: Int = Method.GET,
     private val body: String? = null
@@ -44,9 +42,7 @@ class Fetcher(
     override fun deliverResponse(response: ByteArray) = listener.onResponse(response)
 
     override fun parseNetworkResponse(response: NetworkResponse): Response<ByteArray> =
-        Response.success(
-            response.data as ByteArray, HttpHeaderParser.parseCacheHeaders(response)
-        )
+        Response.success(response.data as ByteArray, HttpHeaderParser.parseCacheHeaders(response))
 
     class Listener(private val listener: OnFinished) : Response.Listener<ByteArray> {
         override fun onResponse(response: ByteArray) {
@@ -78,21 +74,6 @@ class Fetcher(
             "https://www.instagram.com/graphql/query/?query_hash=%1\$s&variables=" +
                     "{\"id\":\"%2\$s\",\"first\":%3\$s,\"after\":\"%4\$s\"}"
         ),
-    }
-
-    class Delayer(private val onFinished: OnFinished) : CountDownTimer(HUMAN_DELAY, HUMAN_DELAY) {
-        init {
-            start()
-        }
-
-        override fun onTick(millisUntilFinished: Long) {}
-        override fun onFinish() {
-            onFinished.finish()
-        }
-
-        fun interface OnFinished {
-            fun finish()
-        }
     }
 
     companion object {

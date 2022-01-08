@@ -112,10 +112,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         }
 
         /*UiWork(c, Action.CUSTOM_WORK, UiWork.CustomWork { dao ->
-            dao.nominees().forEach { dao.updateNominee(it.apply {
-                anal = false
-                fllw = false
-            }) }
+            dao.nominees().forEach { dao.updateNominee(it.apply { anal = false }) }
         }).start()*/
         // Thread { TfUtils.preTrain(c) }.start()
         // TfUtils.test(c, b.face, b.bytes)
@@ -214,7 +211,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
     }
 
     private fun sortList() {
-        candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_NOM_NAME))
+        candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_NOM_USER))
         candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_SCORE))
         candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_REJECTED))
     }

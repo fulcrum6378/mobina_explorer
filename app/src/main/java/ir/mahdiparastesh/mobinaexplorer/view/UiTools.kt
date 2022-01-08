@@ -63,7 +63,7 @@ class UiTools {
             val parent = v.parent as ConstraintLayout
             val ex = View(c).apply {
                 background = ContextCompat.getDrawable(c, res)
-                translationY = v.translationY * .315f
+                translationY = v.translationY * .328f
                 scaleX = v.scaleX
                 scaleY = v.scaleY
                 alpha = v.alpha
@@ -72,7 +72,7 @@ class UiTools {
             parent.addView(ex, parent.indexOfChild(v) + 1,
                 ConstraintLayout.LayoutParams(dim, dim).apply {
                     topToTop = v.id; leftToLeft = v.id; rightToRight = v.id; bottomToBottom = v.id
-                    verticalBias = .183f
+                    verticalBias = .191f
                 })
 
             AnimatorSet().setDuration(1003L).apply {
