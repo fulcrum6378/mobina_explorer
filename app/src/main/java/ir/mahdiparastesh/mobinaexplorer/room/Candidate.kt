@@ -19,8 +19,8 @@ class Candidate(
     companion object {
         const val IN_PROFILE = "P"
         const val IN_PROFILE_TEXT = "PT"
-        const val IN_POST = "%1\$s_%2\$s"
-        const val IN_POST_TEXT = "T_%1\$s_%2\$s"
+        const val IN_POST = "%1\$d_%2\$d"
+        const val IN_POST_TEXT = "T_%1\$d"
     }
 
     class Sort(private val by: Int) : Comparator<Candidate>{

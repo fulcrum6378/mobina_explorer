@@ -54,6 +54,11 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                     Action.CANDIDATES.ordinal -> {
                         val scr = canScroll
                         candidature = ArrayList(msg.obj as List<Candidate>)
+                        b.canSum.text = getString(
+                            R.string.canSum, candidature!!.size,
+                            candidature!!.filter { !it.rejected }.size,
+                            candidature!!.filter { it.rejected }.size
+                        )
                         sortList()
                         b.candidature.adapter = ListUser(candidature!!, this@Panel)
                         vis(b.noCan, candidature!!.isEmpty())
@@ -183,6 +188,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
             }
             vis(b.shadow, robotBias < maxBias)
             vis(b.bytes, robotBias >= maxBias)
+            vis(b.canSum, robotBias >= maxBias)
             b.status.alpha = robotBias * 2f
 
             return robotBias

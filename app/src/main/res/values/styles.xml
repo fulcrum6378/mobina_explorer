@@ -8,4 +8,16 @@
         <item name="android:background">@drawable/shadow</item>
         <item name="android:rotationX">180</item>
     </style>
+
+    <style name="smallDesc">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingHorizontal">25dp</item>
+        <item name="android:paddingVertical">20dp</item>
+        <item name="android:textColor">@color/CPO</item>
+        <!--<item name="android:textIsSelectable">true</item>-->
+        <item name="android:textSize">13sp</item>
+        <item name="layout_constraintBottom_toBottomOf">parent</item>
+        <item name="layout_constraintWidth_percent">0.5</item>
+    </style>
 </resources>

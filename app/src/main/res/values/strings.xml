@@ -12,4 +12,5 @@
         <item>gb</item>
     </string-array>
     <string name="cmReject">Reject</string>
+    <string name="canSum">%1$d items (%2$d+%3$d)</string>
 </resources>

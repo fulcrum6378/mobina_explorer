@@ -33,7 +33,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                 handler.obtainMessage(handler.ANALYZED).sendToTarget()
                 return@Listener
             }
-            Crawler.un = nom.user
+            // Crawler.un = nom.user
 
             val cnf = Fetcher.decode(html).substringAfter(preConfig).substringBefore(posConfig)
             try {
@@ -162,7 +162,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         if (searchScopes(true, *scopes))
             revertProximity()
         if (searchScopes(false, *scopes)) {
-            qualify(null, Candidate.IN_POST_TEXT)
+            qualify(null, Candidate.IN_POST_TEXT.format(analyzedPosts))
             return
         }
 
@@ -185,7 +185,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         Fetcher(c, slides[ii].src, Fetcher.Listener { img ->
             c.analyzer.Subject(img) { res ->
                 if (!res.isNullOrEmpty() && res.anyQualified()) {
-                    qualify(res, Candidate.IN_POST.format(i.toString(), ii.toString()))
+                    qualify(res, Candidate.IN_POST.format(analyzedPosts, ii))
                     return@Subject
                 }
                 analPost(i, slides, ii + 1)

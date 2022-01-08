@@ -23,18 +23,8 @@ class Explorer : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
         if (intent?.action != null && state.value != State.CHANGING) when (intent.action) {
-            Code.RESUME.s -> if (state.value == State.SLEPT) {
-                state.value = State.ACTIVE
-                crawler.running = true
-            }
-            Code.PAUSE.s -> if (state.value == State.ACTIVE) {
-                state.value = State.SLEPT
-                crawler.running = false // TODO: This is NOT real pausing
-            }
-            Code.STOP.s -> if (state.value == State.ACTIVE || state.value == State.SLEPT) {
-                stopForeground(true)
+            Code.STOP.s -> if (state.value == State.ACTIVE)
                 stopSelf()
-            }
         }
         return START_NOT_STICKY
     }
@@ -77,6 +67,7 @@ class Explorer : Service() {
 
     override fun onDestroy() {
         state.value = State.CHANGING
+        stopForeground(true)
         crawler.interrupt()
         super.onDestroy()
         System.gc()
@@ -87,12 +78,11 @@ class Explorer : Service() {
 
     companion object {
         const val CH_ID = 103
+        val pack: String = Explorer::class.java.`package`!!.name
         val state = MutableLiveData(State.OFF)
         val status = MutableLiveData(Crawler.Signal.OFF.s)
         lateinit var handler: Handler
         const val HANDLE_STATUS = 0
-
-        fun packageName(): String = Explorer::class.java.`package`!!.name
 
         fun pi(c: Context, code: Code): PendingIntent = PendingIntent.getService(
             c, 0, Intent(c, Explorer::class.java).apply { action = code.s },
@@ -101,12 +91,10 @@ class Explorer : Service() {
     }
 
     enum class Code(val s: String) {
-        CHANNEL("${packageName()}.EXPLORING"),
-        CRW_HANDLING("${packageName()}.HANDLING"),
-        RESUME("${packageName()}.ACTION_RESUME"),
-        PAUSE("${packageName()}.ACTION_PAUSE"),
-        STOP("${packageName()}.ACTION_STOP"),
+        CHANNEL("$pack.EXPLORING"),
+        CRW_HANDLING("$pack.HANDLING"),
+        STOP("$pack.ACTION_STOP"),
     }
 
-    enum class State { OFF, ACTIVE, SLEPT, CHANGING }
+    enum class State { OFF, ACTIVE, CHANGING }
 }

@@ -47,6 +47,7 @@ class Crawler(private val c: Explorer) : Thread() {
                     HANDLE_ML_KIT -> (msg.obj as Analyzer.Transit)
                         .apply { listener.onFinished(results) }
                     HANDLE_ERROR -> Fetcher.Delayer { carryOn() }
+                    HANDLE_STOP -> c.stopSelf()
                 }
             }
         }
@@ -137,12 +138,15 @@ class Crawler(private val c: Explorer) : Thread() {
         const val HANDLE_ML_KIT = 1
         const val HANDLE_INTERRUPT = 2
         const val HANDLE_ERROR = 3
-        const val maxTryAgain = 5
-        var un = ""
+        const val HANDLE_STOP = 4
+        const val maxTryAgain = 2
+        // var un = ""
 
         fun signal(status: Signal, vararg s: String) {
             Explorer.handler.obtainMessage(Explorer.HANDLE_STATUS, status.s.format(*s))
                 .sendToTarget()
+            if (status in arrayOf(Signal.SIGNED_OUT, Signal.VOLLEY_NOT_WORKING))
+                handler?.obtainMessage(HANDLE_STOP)?.sendToTarget()
         }
 
         fun bytesSinceBoot() = TrafficStats.getUidTxBytes(Process.myUid())

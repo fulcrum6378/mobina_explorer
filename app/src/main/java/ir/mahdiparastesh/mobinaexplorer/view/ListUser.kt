@@ -30,7 +30,23 @@ class ListUser(private val list: List<Candidate>, private val that: Panel) :
             DecimalFormat("#.##").format(list[i].score * 100f) + "%"
         else "nominal"
         h.b.name.text = "${i + 1}. ${list[i].nominee?.name} ($scr)"
-        h.b.user.text = list[i].nominee?.user
+        val where = when {
+            list[i].where == "P" -> "avatar"
+            list[i].where == "PT" -> "bio"
+            list[i].where.startsWith("T_") ->
+                "post ${
+                    try {
+                        list[i].where.substring(2).toInt() + 1
+                    } catch (ignored: NumberFormatException) {
+                        list[i].where.substring(2)
+                    }
+                } -> caption"
+            else -> {
+                val pp = list[i].where.split("_")
+                "post ${pp[0].toInt() + 1} -> slide ${pp[1].toInt() + 1}"
+            }
+        }
+        h.b.user.text = "${list[i].nominee?.user} -> $where"
 
         h.b.root.alpha = if (list[i].rejected) rejectedAlpha else 1f
         h.b.root.setOnClickListener {
