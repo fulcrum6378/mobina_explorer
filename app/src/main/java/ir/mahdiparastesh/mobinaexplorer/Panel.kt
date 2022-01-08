@@ -49,7 +49,9 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
             @Suppress("UNCHECKED_CAST")
             override fun handleMessage(msg: Message) {
                 when (msg.what) {
-                    Action.BYTES.ordinal ->
+                    Action.WAVE_UP.ordinal ->
+                        UiTools.wave(this@Panel, b.start, R.drawable.explosive)
+                    Action.WAVE_DOWN.ordinal ->
                         b.bytes.text = UiTools.bytes(c, Crawler.bytesSinceBoot())
                     Action.CANDIDATES.ordinal -> {
                         val scr = canScroll
@@ -73,7 +75,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                 }
             }
         }
-        handler?.obtainMessage(Action.BYTES.ordinal)?.sendToTarget()
+        handler?.obtainMessage(Action.WAVE_DOWN.ordinal)?.sendToTarget()
 
         // Control the Foreground Service
         Explorer.state.observe(this) { s -> exploring(s) }
@@ -85,10 +87,8 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                 if (Explorer.state.value == Explorer.State.ACTIVE) action = Explorer.Code.STOP.s
             })
         }
-        b.start.layoutParams = (b.start.layoutParams as ConstraintLayout.LayoutParams).apply {
-            matchConstraintPercentHeight =
-                (dm.widthPixels.toFloat() / dm.heightPixels) * matchConstraintPercentWidth
-        }
+        square(b.start)
+        square(b.robot)
         Explorer.status.observe(this) { s ->
             b.status.text = s
             b.status.setTextColor(color(c, R.color.alarm))
@@ -112,7 +112,10 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         }
 
         /*UiWork(c, Action.CUSTOM_WORK, UiWork.CustomWork { dao ->
-            dao.nominees().forEach { dao.updateNominee(it.apply { anal = false }) }
+            dao.nominees().forEach { dao.updateNominee(it.apply {
+                anal = false
+                fllw = false
+            }) }
         }).start()*/
         // Thread { TfUtils.preTrain(c) }.start()
         // TfUtils.test(c, b.face, b.bytes)
@@ -171,13 +174,10 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
 
             if (robotBias < minBias) robotBias = minBias
             if (robotBias > maxBias) robotBias = maxBias
-            b.start.layoutParams = (b.start.layoutParams as ConstraintLayout.LayoutParams)
-                .apply { verticalBias = robotBias }
-            ((robotBias * 1.75f) + 0.25f).apply {
-                b.start.scaleX = this
-                b.start.scaleY = this
-            }
+            resizeStart(b.start, robotBias)
+            resizeStart(b.robot, robotBias)
             b.start.translationY = ((-b.start.height * 0.25f) * (1f - (robotBias * 2f)))
+            b.robot.translationY = ((-b.robot.height * 0.1f) * (1f - (robotBias * 2f)))
 
             b.candidature.layoutParams =
                 (b.candidature.layoutParams as ConstraintLayout.LayoutParams)
@@ -192,6 +192,15 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
             b.status.alpha = robotBias * 2f
 
             return robotBias
+        }
+
+        fun resizeStart(v: View, robotBias: Float) {
+            v.layoutParams = (v.layoutParams as ConstraintLayout.LayoutParams)
+                .apply { verticalBias = robotBias }
+            ((robotBias * 1.75f) + 0.25f).apply {
+                v.scaleX = this
+                v.scaleY = this
+            }
         }
     }
 
@@ -210,5 +219,15 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_REJECTED))
     }
 
-    enum class Action { CANDIDATES, REJECT, BYTES, REFRESH, CUSTOM_WORK }
+    private fun square(v: View) {
+        v.layoutParams = (v.layoutParams as ConstraintLayout.LayoutParams).apply {
+            matchConstraintPercentHeight =
+                (dm.widthPixels.toFloat() / dm.heightPixels) * matchConstraintPercentWidth
+        }
+    }
+
+    enum class Action {
+        CANDIDATES, REJECT, CUSTOM_WORK,
+        WAVE_UP, WAVE_DOWN, REFRESH
+    }
 }

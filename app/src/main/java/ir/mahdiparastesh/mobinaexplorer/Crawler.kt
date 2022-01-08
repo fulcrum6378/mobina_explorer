@@ -123,7 +123,7 @@ class Crawler(private val c: Explorer) : Thread() {
         PROFILE_PHOTO("Analyzing %s's profile photo..."),
         START_POSTS("Found nothing :( Inspecting %s's posts..."),
         RESUME_POSTS("Fetching more posts from %1\$s (currently %2\$s)..."),
-        ANALYZE_POST("Analyzing %1\$s's post #%2\$s"),
+        ANALYZE_POST("Analyzing %1\$s's post %2\$s, slide %3\$s"),
         FOLLOWERS("Fetching %1\$s's followers (%2\$s)..."),
         FOLLOWERS_W("Waiting before fetching %1\$s's followers (%2\$s)..."),
         FOLLOWING("Fetching %1\$s's following (%2\$s)..."),
@@ -161,13 +161,14 @@ class Crawler(private val c: Explorer) : Thread() {
         }
 
         fun maxFollow(prx: Proximity) = when (prx) {
-            Proximity.MIN_PROXIMITY -> 3000
-            Proximity.MED_PROXIMITY -> 2000
-            Proximity.MAX_PROXIMITY -> 1000
+            Proximity.MIN_PROXIMITY -> 1500
+            Proximity.MED_PROXIMITY -> 1000
+            Proximity.MAX_PROXIMITY -> 500
             else -> 0
         }
 
-        const val HUMAN_DELAY = 5000L
+        const val MAX_SLIDES = 5
+        const val HUMAN_DELAY = 7500L
         val proximity = arrayOf("rasht", "resht", "gilan", "رشت", "گیلان")
         val keywords = arrayOf("mobina", "مبینا", "1379", "79", "2000")
     }

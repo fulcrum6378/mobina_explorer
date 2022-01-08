@@ -4,6 +4,7 @@ import android.os.Handler
 import android.os.Message
 import com.android.volley.Request
 import com.google.gson.Gson
+import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MAX_SLIDES
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.keywords
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.proximity
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.signal
@@ -64,11 +65,11 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                 Fetcher(c, lookAt, Fetcher.Listener { img ->
                     if (c.crawler.running) c.analyzer.Subject(img) { res ->
                         if (res.isNullOrEmpty() || !res.anyQualified())
-                            resumePosts(timeline.edges)
+                            fetchPosts(timeline.edges)
                         else qualify(res, Candidate.IN_PROFILE)
                     }
                 })
-            } else resumePosts(timeline.edges)
+            } else fetchPosts(timeline.edges)
         })
     }
 
@@ -110,15 +111,15 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             }
         }
 
-        private fun bye() = Fetcher.Delayer {
+        private fun bye() {
             nom.fllw = true
             dao.updateNominee(nom)
             signal(Signal.RESTING, nom.user)
-            c.crawler.carryOn()
+            Fetcher.Delayer { Fetcher.Delayer { c.crawler.carryOn() } }
         }
     }
 
-    private fun resumePosts(initial: Array<EdgePost>?) {
+    private fun fetchPosts(initial: Array<EdgePost>?) {
         if (!c.crawler.running) return
         if (!nom.accs) {
             handler.obtainMessage(handler.ANALYZED).sendToTarget()
@@ -127,7 +128,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         if (initial != null) {
             signal(Signal.START_POSTS, nom.user)
             allPosts.addAll(timeline.edges)
-            analLot()
+            analPost()
             return
         } else if (!timeline.page_info.has_next_page || allPosts.size >= nom.maxPosts()) {
             handler.obtainMessage(handler.ANALYZED).sendToTarget()
@@ -143,15 +144,20 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                     ).data.user
                     timeline = u.edge_owner_to_timeline_media!!
                     allPosts.addAll(timeline.edges)
-                    analLot()
+                    analPost()
                 })
         }
     }
 
-    private fun analLot(i: Int = 0) {
+    private var analyzedPosts = 0
+    private fun analPost(i: Int = 0) {
         if (!c.crawler.running) return
+        if (analyzedPosts > nom.maxPosts()) {
+            handler.obtainMessage(handler.ANALYZED).sendToTarget()
+            return
+        }
         if (i >= timeline.edges.size - 1) {
-            resumePosts(null)
+            fetchPosts(null)
             return
         }
 
@@ -166,32 +172,30 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             return
         }
 
-        analPost(i, timeline.edges[i].node.thumbnail_resources)
+        val urls = arrayListOf(timeline.edges[i].node.display_url)
+        timeline.edges[i].node.edge_sidecar_to_children?.let { slider ->
+            slider.edges.forEach { urls.add(it.node.display_url) }
+        }
+        analSlide(i, urls.toTypedArray())
     }
 
-    private var analyzedPosts = 0
-    private fun analPost(i: Int, slides: Array<ThumbRes>, ii: Int = 0) {
-        // "i" is NOT the same as "analyzedPosts"
+    private fun analSlide(i: Int, slides: Array<String>, ii: Int = 0) {
         if (!c.crawler.running) return
-        if (analyzedPosts > nom.maxPosts()) {
-            handler.obtainMessage(handler.ANALYZED).sendToTarget()
+        if (ii >= slides.size || ii >= MAX_SLIDES) {
+            analyzedPosts++
+            analPost(i + 1)
             return
         }
-        if (ii >= slides.size - 1) {
-            analLot(i + 1)
-            return
-        }
-        signal(Signal.ANALYZE_POST, nom.user, "${analyzedPosts + 1}")
-        Fetcher(c, slides[ii].src, Fetcher.Listener { img ->
+        signal(Signal.ANALYZE_POST, nom.user, "${analyzedPosts + 1}", "${ii + 1}")
+        Fetcher(c, slides[ii], Fetcher.Listener { img ->
             c.analyzer.Subject(img) { res ->
                 if (!res.isNullOrEmpty() && res.anyQualified()) {
                     qualify(res, Candidate.IN_POST.format(analyzedPosts, ii))
                     return@Subject
                 }
-                analPost(i, slides, ii + 1)
+                analSlide(i, slides, ii + 1)
             }
         })
-        analyzedPosts++
     }
 
     @Suppress("LABEL_NAME_CLASH")
@@ -218,9 +222,8 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                     )
 
                     list.addAll(json.users.toMutableList())
-                    if (json.next_max_id == null ||
-                        (nom.proximity() == MAX_PROXIMITY && list.size < nom.maxFollow())
-                    ) handler.obtainMessage(type.ordinal, listOf(list, friends)).sendToTarget()
+                    if (json.next_max_id == null || list.size >= nom.maxFollow())
+                        handler.obtainMessage(type.ordinal, listOf(list, friends)).sendToTarget()
                     else {
                         signal(
                             if (type == Type.FOLLOWERS) Signal.FOLLOWERS_W else Signal.FOLLOWING_W,

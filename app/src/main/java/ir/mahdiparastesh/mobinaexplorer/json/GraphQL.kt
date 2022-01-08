@@ -73,6 +73,7 @@ class GraphQL(val user: User) {
         val edge_media_to_caption: EdgesCaption,
         val edge_media_to_comment: HashMap<String, *>,
         val edge_media_to_tagged_user: EdgeTaggedUsers,
+        val edge_sidecar_to_children: EdgeSlides?,
         val fact_check_information: Any?,
         val fact_check_overall_rating: Any?,
         val felix_profile_grid_crop: Any?,
@@ -89,7 +90,7 @@ class GraphQL(val user: User) {
         val sharing_friction_info: HashMap<String, *>,
         val shortcode: String,
         val taken_at_timestamp: Double,
-        val thumbnail_resources: Array<ThumbRes>,
+        val thumbnail_resources: Array<Src>,
         val thumbnail_src: String,
         val tracking_token: String,
         val video_url: String,
@@ -104,12 +105,30 @@ class GraphQL(val user: User) {
 
     class EdgeTaggedUsers(val node: Array<Any>)
 
-    class ThumbRes(val src: String, val config_width: Float, val config_height: Float)
+    class Src(val src: String, val config_width: Float, val config_height: Float)
 
     class Location(
         val id: Long,
         val has_public_page: Boolean,
         val name: String,
         val slug: String
+    )
+
+    class EdgeSlides(val edges: Array<EdgeSlide>)
+
+    class EdgeSlide(val node: Slide)
+
+    class Slide(
+        val __typename: String,
+        val id: String,
+        val gating_info: Any?,
+        val fact_check_overall_rating: Any?,
+        val fact_check_information: Any?,
+        val media_overlay_info: Any?,
+        val sensitivity_friction_info: Any?,
+        val sharing_friction_info: HashMap<String, *>?,
+        val dimensions: HashMap<String, Float>?,
+        val display_url: String, // USE THIS
+        val display_resources: Array<Src>
     )
 }
