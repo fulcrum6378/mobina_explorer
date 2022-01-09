@@ -40,6 +40,6 @@ class Candidate(
 
         private fun bb(b: Boolean) = if (b) 1 else 0
 
-        private fun ii(i: Float): Int = (if (i == -1f) i else i * 100f).toInt()
+        private fun ii(i: Float): Int = (if (i == -1f) i else i * 10000f).toInt()
     }
 }

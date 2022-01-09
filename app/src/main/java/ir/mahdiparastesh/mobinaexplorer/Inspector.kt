@@ -4,11 +4,12 @@ import android.os.Handler
 import android.os.Message
 import com.android.volley.Request
 import com.google.gson.Gson
-import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MAX_SLIDES
+import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MAX_PROXIMITY
+import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MED_PROXIMITY
+import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MIN_PROXIMITY
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.keywords
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.proximity
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.signal
-import ir.mahdiparastesh.mobinaexplorer.Crawler.Proximity.*
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Signal
 import ir.mahdiparastesh.mobinaexplorer.Fetcher.Type
 import ir.mahdiparastesh.mobinaexplorer.json.*
@@ -83,7 +84,9 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         })
     }
 
+    var qualified = false
     private fun qualify(res: Analyzer.Results?, type: String) {
+        qualified = true
         signal(Signal.QUALIFIED, nom.user)
         handler.obtainMessage(handler.ANALYZED).sendToTarget()
         c.crawler.candidate(Candidate(nom.id, res?.mobina() ?: -1f, type))
@@ -102,10 +105,12 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                         nom.anal = true
                         dao.updateNominee(nom)
                     }
-                    if (nom.accs && nom.proximity() != OUT_OF_REACH && !nom.fllw) {
-                        signal(Signal.FOLLOWERS_W, nom.user, "0")
-                        Delayer(l) { allFollow(Type.FOLLOWERS, mutableListOf(), hashMapOf()) }
-                    } else bye()
+                    if (nom.accs && nom.proximity() != null && !nom.fllw) {
+                        if (Explorer.shouldFollow) {
+                            if (!qualified) signal(Signal.FOLLOWERS_W, nom.user, "0")
+                            Delayer(l) { allFollow(Type.FOLLOWERS, mutableListOf(), hashMapOf()) }
+                        } else bye(done = false, signal = !qualified)
+                    } else bye(signal = !qualified)
                 }
                 FOLLOWERS -> {
                     val res = msg.obj as List<Any>
@@ -127,10 +132,12 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             }
         }
 
-        private fun bye() {
-            nom.fllw = true
-            dao.updateNominee(nom)
-            signal(Signal.RESTING, nom.user)
+        private fun bye(done: Boolean = true, signal: Boolean = true) {
+            if (done) {
+                nom.fllw = true
+                dao.updateNominee(nom)
+            }
+            if (signal) signal(Signal.RESTING, nom.user)
             Delayer(l) { Delayer(l) { c.crawler.carryOn() } }
         }
     }
@@ -146,7 +153,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             allPosts.addAll(timeline.edges)
             analPost()
             return
-        } else if (!timeline.page_info.has_next_page || allPosts.size >= nom.maxPosts()) {
+        } else if (!timeline.page_info.has_next_page || analyzedPosts >= nom.maxPosts()) {
             handler.obtainMessage(handler.ANALYZED).sendToTarget()
             return
         }
@@ -168,7 +175,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
     private var analyzedPosts = 0
     private fun analPost(i: Int = 0) {
         if (!c.crawler.running) return
-        if (analyzedPosts > nom.maxPosts()) {
+        if (analyzedPosts >= nom.maxPosts()) {
             handler.obtainMessage(handler.ANALYZED).sendToTarget()
             return
         }
@@ -197,7 +204,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
 
     private fun analSlide(i: Int, slides: Array<String>, ii: Int = 0) {
         if (!c.crawler.running) return
-        if (ii >= slides.size || ii >= MAX_SLIDES) {
+        if (ii >= slides.size || ii >= nom.maxSlides()) {
             analyzedPosts++
             analPost(i + 1)
             return

@@ -140,7 +140,6 @@ class Crawler(private val c: Explorer) : Thread() {
         const val HANDLE_INTERRUPT = 2
         const val HANDLE_ERROR = 3
         const val HANDLE_STOP = 4
-        const val maxTryAgain = 2
 
         fun signal(status: Signal, vararg s: String) {
             Explorer.handler.obtainMessage(Explorer.HANDLE_STATUS, status.s.format(*s))
@@ -153,30 +152,34 @@ class Crawler(private val c: Explorer) : Thread() {
 
         fun now() = Calendar.getInstance().timeInMillis
 
-        fun maxPosts(prx: Proximity) = when (prx) {
-            Proximity.MIN_PROXIMITY -> 12
-            Proximity.MED_PROXIMITY -> 8
-            Proximity.MAX_PROXIMITY -> 4
+        fun maxPosts(prx: Byte?) = when (prx) {
+            MIN_PROXIMITY -> 9
+            MED_PROXIMITY -> 6
+            MAX_PROXIMITY -> 3
             else -> 0
         }
 
-        fun maxFollow(prx: Proximity) = when (prx) {
-            Proximity.MIN_PROXIMITY -> 1500
-            Proximity.MED_PROXIMITY -> 1000
-            Proximity.MAX_PROXIMITY -> 500
+        fun maxFollow(prx: Byte?) = when (prx) {
+            MIN_PROXIMITY -> 1500
+            MED_PROXIMITY -> 1000
+            MAX_PROXIMITY -> 500
             else -> 0
         }
 
-        const val MAX_SLIDES = 5
+        fun maxSlides(prx: Byte?) = when (prx) {
+            MIN_PROXIMITY -> 3
+            MED_PROXIMITY -> 6
+            MAX_PROXIMITY -> 9
+            else -> 0
+        }
+
         const val HUMAN_DELAY = 5000L
+        const val maxTryAgain = 2
+        const val MIN_PROXIMITY = (3).toByte() // {0, 1, 2, 3} All followers/following will be nominated
+        const val MED_PROXIMITY = (6).toByte() // {4, 5, 6} All followers/following will be searched
+        const val MAX_PROXIMITY = (9).toByte() // {7, 8, 9} Some followers/following will be searched
+        // 10+ step followers/following won't be fetched
         val proximity = arrayOf("rasht", "resht", "gilan", "رشت", "گیلان")
         val keywords = arrayOf("mobina", "مبینا", "1379", "79", "2000")
-    }
-
-    enum class Proximity(val max: Byte?) {
-        MIN_PROXIMITY(3), // {0, 1, 2, 3} All followers/following will be nominated
-        MED_PROXIMITY(6), // {4, 5, 6} All followers/following will be searched
-        MAX_PROXIMITY(9), // {7, 8, 9} Some followers/following will be searched
-        OUT_OF_REACH(null) // 10+ step followers/following won't be fetched
     }
 }

@@ -1,6 +1,7 @@
 package ir.mahdiparastesh.mobinaexplorer.view
 
 import android.content.Context
+import android.icu.text.DecimalFormat
 import ir.mahdiparastesh.mobinaexplorer.Panel
 import ir.mahdiparastesh.mobinaexplorer.Panel.Action
 import ir.mahdiparastesh.mobinaexplorer.room.Candidate
@@ -26,12 +27,26 @@ class UiWork(
                 rejected = true
                 dao.updateCandidate(this)
             }
+            Action.ACCEPT -> (input as Candidate).apply {
+                rejected = false
+                dao.updateCandidate(this)
+            }
             Action.CUSTOM_WORK -> (input as CustomWork).execute(dao)
+            Action.SUMMARY -> arrayListOf<String>().apply {
+                val noms = dao.nominees()
+                val sum = noms.size
+                add(sum.toString())
+                add(if (sum != 0) sumCent(sum, noms.filter { it.anal }.size).toString() else "0")
+                add(if (sum != 0) sumCent(sum, noms.filter { it.fllw }.size).toString() else "0")
+            }.toTypedArray()
             else -> null
         }
         Panel.handler?.obtainMessage(work.ordinal, obj)?.sendToTarget()
         db.close()
     }
+
+    private fun sumCent(sum: Int, cent: Int) =
+        DecimalFormat("#.##").format((100f / sum.toFloat()) * cent.toFloat())
 
     fun interface CustomWork {
         fun execute(dao: Database.DAO): Any?

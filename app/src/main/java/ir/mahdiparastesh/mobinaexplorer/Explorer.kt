@@ -78,11 +78,12 @@ class Explorer : Service() {
 
     companion object {
         const val CH_ID = 103
+        const val HANDLE_STATUS = 0
+        lateinit var handler: Handler
         val pack: String = Explorer::class.java.`package`!!.name
         val state = MutableLiveData(State.OFF)
         val status = MutableLiveData(Crawler.Signal.OFF.s)
-        lateinit var handler: Handler
-        const val HANDLE_STATUS = 0
+        var shouldFollow = false
 
         fun pi(c: Context, code: Code): PendingIntent = PendingIntent.getService(
             c, 0, Intent(c, Explorer::class.java).apply { action = code.s },

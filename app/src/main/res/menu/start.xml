@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/smFollow"
+        android:checkable="true"
+        android:checked="true"
+        android:title="@string/smFollow" />
+    <item
+        android:id="@+id/smSummary"
+        android:title="@string/smSummary" />
+    <item
+        android:id="@+id/smExport"
+        android:title="@string/smExport" />
+</menu>

@@ -4,8 +4,9 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import ir.mahdiparastesh.mobinaexplorer.Crawler
-import ir.mahdiparastesh.mobinaexplorer.Crawler.Proximity
-import ir.mahdiparastesh.mobinaexplorer.Crawler.Proximity.*
+import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MAX_PROXIMITY
+import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MED_PROXIMITY
+import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MIN_PROXIMITY
 
 @Suppress("SpellCheckingInspection")
 @Entity
@@ -21,14 +22,16 @@ class Nominee(
     @Suppress("unused")
     constructor() : this(-1, "", "", false, -1, false, false)
 
-    fun proximity(): Proximity = when {
-        step <= MAX_PROXIMITY.max!! -> MAX_PROXIMITY
-        step <= MED_PROXIMITY.max!! -> MED_PROXIMITY
-        step <= MIN_PROXIMITY.max!! -> MIN_PROXIMITY
-        else -> OUT_OF_REACH
+    fun proximity(): Byte? = when {
+        step <= MIN_PROXIMITY -> MIN_PROXIMITY
+        step <= MED_PROXIMITY -> MED_PROXIMITY
+        step <= MAX_PROXIMITY -> MAX_PROXIMITY
+        else -> null
     }
 
     fun maxPosts() = Crawler.maxPosts(proximity())
 
     fun maxFollow() = Crawler.maxFollow(proximity())
+
+    fun maxSlides() = Crawler.maxSlides(proximity())
 }

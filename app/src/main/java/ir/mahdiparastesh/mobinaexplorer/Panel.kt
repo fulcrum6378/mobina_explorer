@@ -8,11 +8,15 @@ import android.content.Context
 import android.content.Intent
 import android.os.*
 import android.util.DisplayMetrics
+import android.view.ContextThemeWrapper
 import android.view.MotionEvent
 import android.view.View
+import android.widget.PopupMenu
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import ir.mahdiparastesh.mobinaexplorer.databinding.MainBinding
+import ir.mahdiparastesh.mobinaexplorer.misc.Exporter
 import ir.mahdiparastesh.mobinaexplorer.room.Candidate
 import ir.mahdiparastesh.mobinaexplorer.view.ListUser
 import ir.mahdiparastesh.mobinaexplorer.view.Momentum
@@ -27,12 +31,14 @@ import ir.mahdiparastesh.mobinaexplorer.view.UiWork
 class Panel : AppCompatActivity(), View.OnTouchListener {
     private lateinit var c: Context
     private lateinit var b: MainBinding
-    private var anStatus: ObjectAnimator? = null
+    private lateinit var exporter: Exporter
     private lateinit var dm: DisplayMetrics
+    private var anStatus: ObjectAnimator? = null
     private var candidature: ArrayList<Candidate>? = null
     private var canScroll = 0
 
     companion object {
+        const val DISABLED_ALPHA = .4f
         var handler: Handler? = null
     }
 
@@ -41,11 +47,11 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         b = MainBinding.inflate(layoutInflater)
         setContentView(b.root)
         c = applicationContext
+        exporter = Exporter(this@Panel)
         dm = resources.displayMetrics
 
         // Handler
         handler = object : Handler(Looper.getMainLooper()) {
-            @SuppressLint("NotifyDataSetChanged")
             @Suppress("UNCHECKED_CAST")
             override fun handleMessage(msg: Message) {
                 when (msg.what) {
@@ -56,22 +62,21 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                     Action.CANDIDATES.ordinal -> {
                         val scr = canScroll
                         candidature = ArrayList(msg.obj as List<Candidate>)
-                        b.canSum.text = getString(
-                            R.string.canSum, candidature!!.size,
-                            candidature!!.filter { !it.rejected }.size,
-                            candidature!!.filter { it.rejected }.size
-                        )
-                        sortList()
-                        b.candidature.adapter = ListUser(candidature!!, this@Panel)
+                        arrangeList()
                         vis(b.noCan, candidature!!.isEmpty())
                         if (candidature!!.isNotEmpty()) b.candidature.scrollBy(0, scr)
                     }
                     Action.REFRESH.ordinal -> candidature()
-                    Action.REJECT.ordinal -> (msg.obj as Candidate).apply {
+                    Action.REJECT.ordinal, Action.ACCEPT.ordinal -> (msg.obj as Candidate).apply {
                         candidature?.let { it[it.indexOf(this)] = this }
-                        sortList()
-                        b.candidature.adapter?.notifyDataSetChanged()
+                        arrangeList()
                     }
+                    Action.SUMMARY.ordinal -> AlertDialog.Builder(this@Panel)
+                        .setTitle(R.string.app_name)
+                        .setMessage(
+                            c.getString(R.string.summary).format(*(msg.obj as Array<String>))
+                        )
+                        .setNeutralButton(R.string.ok, null).create().show()
                 }
             }
         }
@@ -103,6 +108,31 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                 })
                 start()
             }
+        }
+        b.start.setOnLongClickListener {
+            PopupMenu(ContextThemeWrapper(this, R.style.Theme_MobinaExplorer), it).apply {
+                setOnMenuItemClickListener { item ->
+                    when (item.itemId) {
+                        R.id.smFollow -> {
+                            Explorer.shouldFollow = !item.isChecked
+                            true
+                        }
+                        R.id.smSummary -> {
+                            UiWork(c, Action.SUMMARY).start()
+                            true
+                        }
+                        R.id.smExport -> {
+                            exporter.launch()
+                            true
+                        }
+                        else -> false
+                    }
+                }
+                inflate(R.menu.start)
+                menu.findItem(R.id.smFollow).isChecked = Explorer.shouldFollow
+                show()
+            }
+            true
         }
 
         // Candidates
@@ -161,7 +191,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
 
     private val maxBias = 0.5f
     private val minBias = 0f
-    private val movePerMove = 0.018f
+    private val movePerMove = 0.021f
     private var speed = 0f // moves per second
     private val momenta = object : Momentum() {
         override fun onMove(increment: Boolean, scalar: Float): Float {
@@ -194,7 +224,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         fun resizeStart(v: View, robotBias: Float) {
             v.layoutParams = (v.layoutParams as ConstraintLayout.LayoutParams)
                 .apply { verticalBias = robotBias }
-            ((robotBias * 1.75f) + 0.25f).apply {
+            ((robotBias * 1.5f) + 0.25f).apply {
                 v.scaleX = this
                 v.scaleY = this
             }
@@ -202,7 +232,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
     }
 
     private fun exploring(state: Explorer.State?) {
-        b.robot.alpha = if (state == Explorer.State.ACTIVE) 1f else .36f
+        b.robot.alpha = if (state == Explorer.State.ACTIVE) 1f else DISABLED_ALPHA
         vis(b.status, state == Explorer.State.ACTIVE)
     }
 
@@ -210,10 +240,19 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         UiWork(c, Action.CANDIDATES).start()
     }
 
-    private fun sortList() {
+    @SuppressLint("NotifyDataSetChanged")
+    private fun arrangeList() {
+        b.canSum.text = getString(
+            R.string.canSum, candidature!!.size,
+            candidature!!.filter { !it.rejected }.size,
+            candidature!!.filter { it.rejected }.size
+        )
         candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_NOM_USER))
         candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_SCORE))
         candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_REJECTED))
+        if (b.candidature.adapter == null)
+            b.candidature.adapter = ListUser(candidature!!, this@Panel)
+        else b.candidature.adapter?.notifyDataSetChanged()
     }
 
     private fun square(v: View) {
@@ -224,7 +263,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
     }
 
     enum class Action {
-        CANDIDATES, REJECT, CUSTOM_WORK,
+        CANDIDATES, REJECT, ACCEPT, CUSTOM_WORK, SUMMARY,
         WAVE_UP, WAVE_DOWN, REFRESH
     }
 }

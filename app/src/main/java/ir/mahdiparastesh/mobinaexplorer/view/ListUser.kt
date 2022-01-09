@@ -47,7 +47,7 @@ class ListUser(private val list: List<Candidate>, private val that: Panel) :
         }
         h.b.user.text = "${list[i].nominee?.user} -> $where"
 
-        h.b.root.alpha = if (list[i].rejected) rejectedAlpha else 1f
+        h.b.root.alpha = if (list[i].rejected) Panel.DISABLED_ALPHA else 1f
         h.b.root.setOnClickListener {
             val uri =
                 Uri.parse(Fetcher.Type.PROFILE.url.format(list[h.layoutPosition].nominee?.user))
@@ -61,10 +61,14 @@ class ListUser(private val list: List<Candidate>, private val that: Panel) :
                             UiWork(that, Panel.Action.REJECT, list[h.layoutPosition]).start()
                             true
                         }
+                        R.id.cmAccept -> {
+                            UiWork(that, Panel.Action.ACCEPT, list[h.layoutPosition]).start()
+                            true
+                        }
                         else -> false
                     }
                 }
-                inflate(R.menu.candidate)
+                inflate(if (!list[h.layoutPosition].rejected) R.menu.can_normal else R.menu.can_rejected)
                 show()
             }
             true
@@ -72,8 +76,4 @@ class ListUser(private val list: List<Candidate>, private val that: Panel) :
     }
 
     override fun getItemCount() = list.size
-
-    companion object {
-        const val rejectedAlpha = 0.5f
-    }
 }

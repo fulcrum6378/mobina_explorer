@@ -1,16 +1,29 @@
 <resources>
     <string name="app_name">Mobina Explorer</string>
 
+    <!-- Explorer -->
     <string name="notif_channel">Explorer</string>
     <string name="notif_channel_desc">Explores for Mobina</string>
     <string name="notif_title">Exploring for Mobina&#8230;</string>
     <string name="notif_stop">Stop</string>
+
+    <!-- Panel -->
+    <string name="canSum">%1$d items (%2$d+%3$d)</string>
     <string-array name="bytes">
         <item>b</item>
         <item>kb</item>
         <item>mg</item>
         <item>gb</item>
     </string-array>
+    <string name="smFollow">Follow</string>
+    <string name="smSummary">Summary</string>
+    <string name="summary">The database has %1\$s nominees.\n%2\$s percent have been analyzed.\n%3\$s percent have been followed.</string>
+    <string name="ok">OK</string>
+    <string name="smExport">Export</string>
+    <string name="exportDone">Done!</string>
+    <string name="exportUndone">Failed!</string>
+
+    <!-- ListUser -->
     <string name="cmReject">Reject</string>
-    <string name="canSum">%1$d items (%2$d+%3$d)</string>
+    <string name="cmAccept">Accept</string>
 </resources>
