@@ -33,8 +33,8 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
     private lateinit var b: MainBinding
     private lateinit var exporter: Exporter
     private lateinit var dm: DisplayMetrics
+    var candidature: ArrayList<Candidate>? = null
     private var anStatus: ObjectAnimator? = null
-    private var candidature: ArrayList<Candidate>? = null
     private var canScroll = 0
 
     companion object {
@@ -68,7 +68,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                         if (candidature != null) (msg.obj as Candidate).apply {
                             val fnd = Candidate.findPosInList(id, candidature!!)
                             if (fnd != -1) candidature!![fnd] = this
-                            arrangeList(id, fnd)
+                            arrangeList()
                         }
                     Action.SUMMARY.ordinal -> AlertDialog.Builder(this@Panel)
                         .setTitle(R.string.app_name)
@@ -230,7 +230,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
     }
 
     @SuppressLint("NotifyDataSetChanged")
-    private fun arrangeList(movedId: Long? = null, movedFrom: Int? = null) {
+    private fun arrangeList() {
         b.canSum.text = getString(
             R.string.canSum, candidature!!.size,
             candidature!!.filter { !it.rejected }.size,
@@ -241,18 +241,9 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_REJECTED))
         if (b.candidature.adapter == null) {
             val scr = canScroll
-            b.candidature.adapter = ListUser(candidature!!, this@Panel)
+            b.candidature.adapter = ListUser(this@Panel)
             if (!candidature.isNullOrEmpty()) b.candidature.scrollBy(0, scr)
-        } else {
-            val movedTo = if (movedId != null && movedFrom != null)
-                Candidate.findPosInList(movedId, candidature!!)
-            else -1
-            if (movedTo != -1) {
-                b.candidature.adapter?.notifyItemMoved(movedFrom!!, movedTo)
-                b.candidature.adapter?.notifyItemChanged(movedFrom!!)
-                b.candidature.adapter?.notifyItemChanged(movedTo)
-            } else b.candidature.adapter?.notifyDataSetChanged()
-        }
+        } else b.candidature.adapter?.notifyDataSetChanged()
 
         vis(b.noCan, candidature!!.isEmpty())
     }

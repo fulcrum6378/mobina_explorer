@@ -148,7 +148,7 @@ class Crawler(private val c: Explorer) : Thread() {
                 handler?.obtainMessage(HANDLE_STOP)?.sendToTarget()
         }
 
-        fun bytesSinceBoot() = TrafficStats.getUidTxBytes(Process.myUid())
+        fun bytesSinceBoot() = TrafficStats.getUidRxBytes(Process.myUid())
 
         fun now() = Calendar.getInstance().timeInMillis
 
@@ -160,16 +160,16 @@ class Crawler(private val c: Explorer) : Thread() {
         }
 
         fun maxFollow(prx: Byte?) = when (prx) {
-            MIN_PROXIMITY -> 1500
-            MED_PROXIMITY -> 1000
-            MAX_PROXIMITY -> 500
+            MIN_PROXIMITY -> 2000
+            MED_PROXIMITY -> 1500
+            MAX_PROXIMITY -> 1000
             else -> 0
         }
 
         fun maxSlides(prx: Byte?) = when (prx) {
-            MIN_PROXIMITY -> 3
+            MIN_PROXIMITY -> 9
             MED_PROXIMITY -> 6
-            MAX_PROXIMITY -> 9
+            MAX_PROXIMITY -> 3
             else -> 0
         }
 

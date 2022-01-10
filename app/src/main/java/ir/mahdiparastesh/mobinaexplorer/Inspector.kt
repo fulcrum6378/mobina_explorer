@@ -184,20 +184,21 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             return
         }
 
-        if (searchScopes(true, timeline.edges[i].node.location?.name))
+        val node = timeline.edges[i].node
+        if (searchScopes(true, node.location?.name, node.accessibility_caption))
             revertProximity()
-        if (searchScopes(false, timeline.edges[i].node.accessibility_caption)) {
+        if (searchScopes(false, node.accessibility_caption)) {
             qualify(null, Candidate.IN_POST_TEXT.format(analyzedPosts))
             return
         }
 
-        val urls = arrayListOf(timeline.edges[i].node.display_url)
-        timeline.edges[i].node.edge_sidecar_to_children?.let { slider ->
-            slider.edges.forEachIndexed { i, slide ->
-                if (i != 0) urls.add(slide.node.display_url)
+        analSlide(i, arrayListOf(node.display_url).apply {
+            node.edge_sidecar_to_children?.let { slider ->
+                slider.edges.forEachIndexed { i, slide ->
+                    if (i != 0) add(slide.node.display_url)
+                }
             }
-        }
-        analSlide(i, urls.toTypedArray())
+        }.toTypedArray())
     }
 
     private fun analSlide(i: Int, slides: Array<String>, ii: Int = 0) {
@@ -264,8 +265,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             MED_PROXIMITY, MAX_PROXIMITY ->
                 list.filter { preferredFollow(it, true) || preferredFollow(it, false) }
             else -> throw IllegalStateException(
-                "While adding followers/following, \"nom\"\'s " +
-                        "proximity must only be one of MIN_PROXIMITY, MED_PROXIMITY or MAX_PROXIMITY."
+                "Proximity must be either MIN_PROXIMITY, MED_PROXIMITY or MAX_PROXIMITY!"
             )
         }.forEach {
             val acs = !it.is_private || fs[it.pk]?.following == true
@@ -306,7 +306,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         const val posConfig = ";</script>"
         const val hash = "8c2a529969ee035a5063f2fc8602a0fd"
         private const val preFriend = "user_ids="
-        private const val sepFriendId = "," //%2C
+        private const val sepFriendId = ","
         var namusanSignedOut = 0
 
         @Suppress("LABEL_NAME_CLASH")

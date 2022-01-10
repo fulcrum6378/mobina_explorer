@@ -50,12 +50,12 @@ class UiTools {
                 kil = ll / 1024L
                 ll %= 1024L
             }
-            return StringBuilder().apply {
-                if (gig > 0) append("$gig ${units[3]}, ")
-                if (meg > 0) append("$meg ${units[2]}, ")
-                if (kil > 0) append("$kil ${units[1]}, ")
-                append("$ll ${units[0]}")
-            }.toString()
+            return arrayListOf<String>().apply {
+                if (gig > 0) add("$gig ${units[3]}")
+                if (meg > 0) add("$meg ${units[2]}")
+                if (kil > 0 && gig == 0L) add("$kil ${units[1]}")
+                if (meg == 0L) add("$ll ${units[0]}")
+            }.joinToString(", ")
         }
 
         fun wave(c: Context, v: View, res: Int) {
