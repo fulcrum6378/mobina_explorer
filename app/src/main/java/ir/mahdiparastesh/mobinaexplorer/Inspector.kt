@@ -184,20 +184,18 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             return
         }
 
-        val scopes = arrayOf(
-            timeline.edges[i].node.accessibility_caption,
-            timeline.edges[i].node.location?.name
-        )
-        if (searchScopes(true, *scopes))
+        if (searchScopes(true, timeline.edges[i].node.location?.name))
             revertProximity()
-        if (searchScopes(false, *scopes)) {
+        if (searchScopes(false, timeline.edges[i].node.accessibility_caption)) {
             qualify(null, Candidate.IN_POST_TEXT.format(analyzedPosts))
             return
         }
 
         val urls = arrayListOf(timeline.edges[i].node.display_url)
         timeline.edges[i].node.edge_sidecar_to_children?.let { slider ->
-            slider.edges.forEach { urls.add(it.node.display_url) }
+            slider.edges.forEachIndexed { i, slide ->
+                if (i != 0) urls.add(slide.node.display_url)
+            }
         }
         analSlide(i, urls.toTypedArray())
     }

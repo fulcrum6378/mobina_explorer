@@ -21,6 +21,15 @@ class Candidate(
         const val IN_PROFILE_TEXT = "PT"
         const val IN_POST = "%1\$d_%2\$d"
         const val IN_POST_TEXT = "T_%1\$d"
+
+        fun findPosInList(id: Long, list: List<Candidate>): Int {
+            var i = -1
+            for (can in list.indices) if (list[can].id == id) {
+                i = can
+                break
+            }
+            return i
+        }
     }
 
     class Sort(private val by: Int) : Comparator<Candidate>{

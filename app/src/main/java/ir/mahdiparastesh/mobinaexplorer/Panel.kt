@@ -60,17 +60,16 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                     Action.WAVE_DOWN.ordinal ->
                         b.bytes.text = UiTools.bytes(c, Crawler.bytesSinceBoot())
                     Action.CANDIDATES.ordinal -> {
-                        val scr = canScroll
                         candidature = ArrayList(msg.obj as List<Candidate>)
                         arrangeList()
-                        vis(b.noCan, candidature!!.isEmpty())
-                        if (candidature!!.isNotEmpty()) b.candidature.scrollBy(0, scr)
                     }
                     Action.REFRESH.ordinal -> candidature()
-                    Action.REJECT.ordinal, Action.ACCEPT.ordinal -> (msg.obj as Candidate).apply {
-                        candidature?.let { it[it.indexOf(this)] = this }
-                        arrangeList()
-                    }
+                    Action.REJECT.ordinal, Action.ACCEPT.ordinal ->
+                        if (candidature != null) (msg.obj as Candidate).apply {
+                            val fnd = Candidate.findPosInList(id, candidature!!)
+                            if (fnd != -1) candidature!![fnd] = this
+                            arrangeList(id, fnd)
+                        }
                     Action.SUMMARY.ordinal -> AlertDialog.Builder(this@Panel)
                         .setTitle(R.string.app_name)
                         .setMessage(
@@ -114,17 +113,11 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                 setOnMenuItemClickListener { item ->
                     when (item.itemId) {
                         R.id.smFollow -> {
-                            Explorer.shouldFollow = !item.isChecked
-                            true
-                        }
+                            Explorer.shouldFollow = !item.isChecked; true; }
                         R.id.smSummary -> {
-                            UiWork(c, Action.SUMMARY).start()
-                            true
-                        }
+                            UiWork(c, Action.SUMMARY).start(); true; }
                         R.id.smExport -> {
-                            exporter.launch()
-                            true
-                        }
+                            exporter.launch(); true; }
                         else -> false
                     }
                 }
@@ -140,17 +133,13 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         b.candidature.viewTreeObserver.addOnScrollChangedListener {
             canScroll = b.candidature.computeVerticalScrollOffset()
         }
+        candidature()
 
         /*UiWork(c, Action.CUSTOM_WORK, UiWork.CustomWork { dao ->
             dao.nominees().forEach { dao.updateNominee(it.apply { anal = false }) }
         }).start()*/
         // Thread { TfUtils.preTrain(c) }.start()
         // TfUtils.test(c, b.face, b.bytes)
-    }
-
-    override fun onResume() {
-        super.onResume()
-        candidature()
     }
 
     override fun onDestroy() {
@@ -241,7 +230,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
     }
 
     @SuppressLint("NotifyDataSetChanged")
-    private fun arrangeList() {
+    private fun arrangeList(movedId: Long? = null, movedFrom: Int? = null) {
         b.canSum.text = getString(
             R.string.canSum, candidature!!.size,
             candidature!!.filter { !it.rejected }.size,
@@ -250,9 +239,22 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_NOM_USER))
         candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_SCORE))
         candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_REJECTED))
-        if (b.candidature.adapter == null)
+        if (b.candidature.adapter == null) {
+            val scr = canScroll
             b.candidature.adapter = ListUser(candidature!!, this@Panel)
-        else b.candidature.adapter?.notifyDataSetChanged()
+            if (!candidature.isNullOrEmpty()) b.candidature.scrollBy(0, scr)
+        } else {
+            val movedTo = if (movedId != null && movedFrom != null)
+                Candidate.findPosInList(movedId, candidature!!)
+            else -1
+            if (movedTo != -1) {
+                b.candidature.adapter?.notifyItemMoved(movedFrom!!, movedTo)
+                b.candidature.adapter?.notifyItemChanged(movedFrom!!)
+                b.candidature.adapter?.notifyItemChanged(movedTo)
+            } else b.candidature.adapter?.notifyDataSetChanged()
+        }
+
+        vis(b.noCan, candidature!!.isEmpty())
     }
 
     private fun square(v: View) {
