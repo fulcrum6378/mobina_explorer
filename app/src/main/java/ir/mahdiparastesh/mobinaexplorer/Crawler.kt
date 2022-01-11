@@ -148,7 +148,8 @@ class Crawler(private val c: Explorer) : Thread() {
                 handler?.obtainMessage(HANDLE_STOP)?.sendToTarget()
         }
 
-        fun bytesSinceBoot() = TrafficStats.getUidRxBytes(Process.myUid())
+        fun bytesSinceBoot() = TrafficStats.getUidRxBytes(Process.myUid()) +
+                TrafficStats.getUidTxBytes(Process.myUid())
 
         fun now() = Calendar.getInstance().timeInMillis
 
