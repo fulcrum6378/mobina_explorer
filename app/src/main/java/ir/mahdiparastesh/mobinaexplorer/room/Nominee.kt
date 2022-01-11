@@ -22,6 +22,17 @@ class Nominee(
     @Suppress("unused")
     constructor() : this(-1, "", "", false, -1, false, false)
 
+    fun analyzed(): Nominee {
+        anal = true
+        return this
+    }
+
+    fun followed(): Nominee {
+        fllw = true
+        return this
+    }
+
+
     fun proximity(): Byte? = when {
         step <= MIN_PROXIMITY -> MIN_PROXIMITY
         step <= MED_PROXIMITY -> MED_PROXIMITY

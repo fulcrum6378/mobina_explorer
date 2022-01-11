@@ -9,7 +9,6 @@ import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MED_PROXIMITY
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MIN_PROXIMITY
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.keywords
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.proximity
-import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.signal
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Signal
 import ir.mahdiparastesh.mobinaexplorer.Fetcher.Type
 import ir.mahdiparastesh.mobinaexplorer.json.*
@@ -22,75 +21,11 @@ import java.util.*
 
 class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean = false) {
     private var db: Database
-    private var dao: Database.DAO
+    private lateinit var dao: Database.DAO
     private lateinit var u: User
     private lateinit var timeline: TimelineMedia
     private val allPosts = arrayListOf<EdgePost>()
     private val l = c.crawler.handling.looper
-
-    init {
-        signal(Signal.INSPECTING, nom.user)
-        db = Database.DbFile.build(c).also { dao = it.dao() }
-        Fetcher(c, Type.PROFILE.url.format(nom.user), Fetcher.Listener { html ->
-            if (!c.crawler.running) return@Listener
-
-            val scopes = arrayListOf(nom.user)
-            if (searchScopes(true, *scopes.toTypedArray())) revertProximity()
-            if (searchScopes(false, *scopes.toTypedArray())) {
-                qualify(null, Candidate.IN_PROFILE_TEXT)
-                return@Listener
-            }
-            if (nom.anal && !forceAnalyze) {
-                handler.obtainMessage(handler.ANALYZED).sendToTarget()
-                return@Listener
-            }
-
-            val cnf = Fetcher.decode(html).substringAfter(preConfig).substringBefore(posConfig)
-            try {
-                u = Gson().fromJson(cnf, PageConfig::class.java).entry_data.ProfilePage[0]
-                    .graphql.user
-                namusanSignedOut = 0
-            } catch (e: Exception) { // JsonSyntaxException
-                namusanSignedOut++
-                if (namusanSignedOut < Crawler.maxTryAgain) {
-                    signal(Signal.INVALID_RESULT)
-                    Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
-                } else signal(Signal.SIGNED_OUT)
-                return@Listener
-            }
-            timeline = u.edge_owner_to_timeline_media!!
-
-            scopes.add(u.full_name)
-            scopes.add(u.biography ?: "")
-            if (searchScopes(true, *scopes.toTypedArray())) revertProximity()
-            if (searchScopes(false, *scopes.toTypedArray())) {
-                qualify(null, Candidate.IN_PROFILE_TEXT)
-                return@Listener
-            }
-
-            if (!c.crawler.running) return@Listener
-            var lookAt = u.profile_pic_url_hd
-            if (lookAt == null) lookAt = u.profile_pic_url
-            if (lookAt != null) {
-                signal(Signal.PROFILE_PHOTO, nom.user)
-                Fetcher(c, lookAt, Fetcher.Listener { img ->
-                    if (c.crawler.running) c.analyzer.Subject(img) { res ->
-                        if (res.isNullOrEmpty() || !res.anyQualified())
-                            fetchPosts(timeline.edges)
-                        else qualify(res, Candidate.IN_PROFILE)
-                    }
-                })
-            } else fetchPosts(timeline.edges)
-        })
-    }
-
-    var qualified = false
-    private fun qualify(res: Analyzer.Results?, type: String) {
-        qualified = true
-        signal(Signal.QUALIFIED, nom.user)
-        handler.obtainMessage(handler.ANALYZED).sendToTarget()
-        c.crawler.candidate(Candidate(nom.id, res?.mobina() ?: -1f, type))
-    }
 
     private val handler = object : Handler(c.crawler.handling.looper) {
         val ANALYZED = 0
@@ -101,21 +36,20 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         override fun handleMessage(msg: Message) {
             when (msg.what) {
                 ANALYZED -> {
-                    if (!nom.anal) {
-                        nom.anal = true
-                        dao.updateNominee(nom)
-                    }
+                    if (!nom.anal)
+                        dao.updateNominee(nom.analyzed())
+                    val doNotWait = msg.obj == false
                     if (nom.accs && nom.proximity() != null && !nom.fllw) {
                         if (Explorer.shouldFollow) {
-                            if (!qualified) signal(Signal.FOLLOWERS_W, nom.user, "0")
+                            if (!qualified) c.crawler.signal(Signal.FOLLOWERS_W, nom.user, "0")
                             Delayer(l) { allFollow(Type.FOLLOWERS, mutableListOf(), hashMapOf()) }
-                        } else bye(done = false, signal = !qualified)
-                    } else bye(signal = !qualified)
+                        } else bye(done = false, signal = !qualified, wait = !doNotWait)
+                    } else bye(signal = !qualified, wait = !doNotWait)
                 }
                 FOLLOWERS -> {
                     val res = msg.obj as List<Any>
                     addFollow(res[0] as List<Rest.User>, res[1] as HashMap<String, Rest.Friendship>)
-                    signal(Signal.FOLLOWING_W, nom.user, "0")
+                    c.crawler.signal(Signal.FOLLOWING_W, nom.user, "0")
                     Delayer(c.crawler.handling.looper) {
                         allFollow(
                             Type.FOLLOWING,
@@ -132,14 +66,79 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             }
         }
 
-        private fun bye(done: Boolean = true, signal: Boolean = true) {
-            if (done) {
-                nom.fllw = true
-                dao.updateNominee(nom)
-            }
-            if (signal) signal(Signal.RESTING, nom.user)
-            Delayer(l) { Delayer(l) { c.crawler.carryOn() } }
+        private fun bye(done: Boolean = true, signal: Boolean = true, wait: Boolean = true) {
+            if (done) dao.updateNominee(nom.followed())
+            if (signal) c.crawler.signal(Signal.RESTING, nom.user)
+            if (wait) Delayer(l) { Delayer(l) { c.crawler.carryOn() } }
+            else c.crawler.carryOn()
         }
+    }
+
+    init {
+        c.crawler.signal(Signal.INSPECTING, nom.user)
+        db = Database.DbFile.build(c).also { dao = it.dao() }
+        var shallFetch = true
+
+        val scopes = arrayListOf(nom.user)
+        if (searchScopes(true, *scopes.toTypedArray()))
+            revertProximity()
+        if (searchScopes(false, *scopes.toTypedArray())) {
+            qualify(null, Candidate.IN_PROFILE_TEXT, false)
+            shallFetch = false
+        }
+        if (shallFetch && nom.anal && !forceAnalyze) {
+            handler.obtainMessage(handler.ANALYZED).sendToTarget()
+            shallFetch = false
+        }
+
+        if (shallFetch) Fetcher(c, Type.PROFILE.url.format(nom.user), Fetcher.Listener { html ->
+            if (!c.crawler.running) return@Listener
+
+            val cnf = Fetcher.decode(html).substringAfter(preConfig).substringBefore(posConfig)
+            try {
+                u = Gson().fromJson(cnf, PageConfig::class.java).entry_data.ProfilePage[0]
+                    .graphql.user
+                namusanSignedOut = 0
+            } catch (e: Exception) { // JsonSyntaxException
+                namusanSignedOut++
+                if (namusanSignedOut < Crawler.maxTryAgain) {
+                    c.crawler.signal(Signal.INVALID_RESULT)
+                    Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
+                } else c.crawler.signal(Signal.SIGNED_OUT)
+                return@Listener
+            }
+            timeline = u.edge_owner_to_timeline_media!!
+
+            scopes.add(u.full_name)
+            scopes.add(u.biography ?: "")
+            if (searchScopes(true, *scopes.toTypedArray())) revertProximity()
+            if (searchScopes(false, *scopes.toTypedArray())) {
+                qualify(null, Candidate.IN_PROFILE_TEXT)
+                return@Listener
+            }
+
+            if (!c.crawler.running) return@Listener
+            var lookAt = u.profile_pic_url_hd
+            if (lookAt == null) lookAt = u.profile_pic_url
+            if (lookAt != null) {
+                c.crawler.signal(Signal.PROFILE_PHOTO, nom.user)
+                Fetcher(c, lookAt, Fetcher.Listener { img ->
+                    if (c.crawler.running) c.analyzer.Subject(img) { res ->
+                        if (res.isNullOrEmpty() || !res.anyQualified())
+                            fetchPosts(timeline.edges)
+                        else qualify(res, Candidate.IN_PROFILE)
+                    }
+                })
+            } else fetchPosts(timeline.edges)
+        })
+    }
+
+    var qualified = false
+    private fun qualify(res: Analyzer.Results?, type: String, shallWait: Boolean = true) {
+        qualified = true
+        c.crawler.signal(Signal.QUALIFIED, nom.user)
+        handler.obtainMessage(handler.ANALYZED, shallWait).sendToTarget()
+        c.crawler.candidate(Candidate(nom.id, res?.mobina() ?: -1f, type))
     }
 
     private fun fetchPosts(initial: Array<EdgePost>?) {
@@ -149,7 +148,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             return
         }
         if (initial != null) {
-            signal(Signal.START_POSTS, nom.user)
+            c.crawler.signal(Signal.START_POSTS, nom.user)
             allPosts.addAll(timeline.edges)
             analPost()
             return
@@ -157,7 +156,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             handler.obtainMessage(handler.ANALYZED).sendToTarget()
             return
         }
-        signal(Signal.RESUME_POSTS, nom.user, allPosts.size.toString())
+        c.crawler.signal(Signal.RESUME_POSTS, nom.user, allPosts.size.toString())
         Delayer(l) {
             if (c.crawler.running) Fetcher(c,
                 Type.POSTS.url.format(hash, nom.id, allPosts.size, timeline.page_info.end_cursor),
@@ -208,7 +207,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             analPost(i + 1)
             return
         }
-        signal(Signal.ANALYZE_POST, nom.user, "${analyzedPosts + 1}", "${ii + 1}")
+        c.crawler.signal(Signal.ANALYZE_POST, nom.user, "${analyzedPosts + 1}", "${ii + 1}")
         Delayer(l) {
             Fetcher(c, slides[ii], Fetcher.Listener { img ->
                 c.analyzer.Subject(img) { res ->
@@ -228,7 +227,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         next_max_id: String = ""
     ) {
         if (!c.crawler.running) return
-        signal(
+        c.crawler.signal(
             if (type == Type.FOLLOWERS) Signal.FOLLOWERS else Signal.FOLLOWING,
             nom.user, list.size.toString()
         )
@@ -247,7 +246,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                     if (json.next_max_id == null || list.size >= nom.maxFollow())
                         handler.obtainMessage(type.ordinal, listOf(list, friends)).sendToTarget()
                     else {
-                        signal(
+                        c.crawler.signal(
                             if (type == Type.FOLLOWERS) Signal.FOLLOWERS_W else Signal.FOLLOWING_W,
                             nom.user, list.size.toString()
                         )
@@ -281,16 +280,6 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
 
     private fun preferredFollow(ru: Rest.User, prx: Boolean) =
         searchScopes(prx, ru.username, ru.full_name)
-
-    private fun searchScopes(prx: Boolean, vararg scopes: String?): Boolean {
-        var ret = false
-        (if (prx) proximity else keywords).forEach { kw ->
-            if (scopes.filterNotNull().any { scope ->
-                    scope.lowercase().contains(kw.lowercase())
-                }) ret = true
-        }
-        return ret
-    }
 
     private fun revertProximity() {
         nom.step = 0
@@ -336,5 +325,15 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                     preFriend + users.joinToString(sepFriendId) { it.user.pk }
                 )
             })
+
+        fun searchScopes(prx: Boolean, vararg scopes: String?): Boolean {
+            var ret = false
+            (if (prx) proximity else keywords).forEach { kw ->
+                if (scopes.filterNotNull().any { scope ->
+                        scope.lowercase().contains(kw.lowercase())
+                    }) ret = true
+            }
+            return ret
+        }
     }
 }

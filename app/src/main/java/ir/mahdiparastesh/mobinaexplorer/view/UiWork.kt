@@ -2,6 +2,8 @@ package ir.mahdiparastesh.mobinaexplorer.view
 
 import android.content.Context
 import android.icu.text.DecimalFormat
+import ir.mahdiparastesh.mobinaexplorer.Crawler
+import ir.mahdiparastesh.mobinaexplorer.Inspector
 import ir.mahdiparastesh.mobinaexplorer.Panel
 import ir.mahdiparastesh.mobinaexplorer.Panel.Action
 import ir.mahdiparastesh.mobinaexplorer.room.Candidate
@@ -39,6 +41,17 @@ class UiWork(
                 add(if (sum != 0) sumCent(sum, noms.filter { it.anal }.size).toString() else "0")
                 add(if (sum != 0) sumCent(sum, noms.filter { it.fllw }.size).toString() else "0")
             }.toTypedArray()
+            Action.CHALLENGE -> {
+                val candy = dao.nominees()
+                    .filter { !it.anal && Inspector.searchScopes(false, it.user, it.name) }
+                for (can in candy) {
+                    Crawler.newCandidate(
+                        Candidate(can.id, -1f, Candidate.IN_PROFILE_TEXT, false), dao
+                    )
+                    dao.updateNominee(can.analyzed())
+                }
+                candy.size
+            }
             else -> null
         }
         Panel.handler?.obtainMessage(work.ordinal, obj)?.sendToTarget()

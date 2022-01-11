@@ -1,15 +1,13 @@
 package ir.mahdiparastesh.mobinaexplorer.view
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.icu.text.DecimalFormat
-import android.net.Uri
 import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.PopupMenu
+import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
-import ir.mahdiparastesh.mobinaexplorer.Fetcher
 import ir.mahdiparastesh.mobinaexplorer.Panel
 import ir.mahdiparastesh.mobinaexplorer.R
 import ir.mahdiparastesh.mobinaexplorer.databinding.ListUserBinding
@@ -49,10 +47,9 @@ class ListUser(private val c: Panel) : RecyclerView.Adapter<ListUser.ViewHolder>
 
         h.b.root.alpha = if (c.candidature!![i].rejected) Panel.DISABLED_ALPHA else 1f
         h.b.root.setOnClickListener {
-            val uri = Uri.parse(
-                Fetcher.Type.PROFILE.url.format(c.candidature!![h.layoutPosition].nominee?.user)
-            )
-            c.startActivity(Intent(Intent.ACTION_VIEW, uri))
+            val un = c.candidature!![h.layoutPosition].nominee?.user
+            if (un != null) UiTools.openProfile(c, un)
+            else Toast.makeText(c, R.string.noUsername, Toast.LENGTH_SHORT).show()
         }
         h.b.root.setOnLongClickListener { v ->
             PopupMenu(ContextThemeWrapper(c, R.style.Theme_MobinaExplorer), v).apply {

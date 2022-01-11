@@ -6,17 +6,24 @@ import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.util.DisplayMetrics
 import android.view.View
+import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
+import ir.mahdiparastesh.mobinaexplorer.Fetcher
 import ir.mahdiparastesh.mobinaexplorer.R
 
 class UiTools {
     companion object {
+        lateinit var dm: DisplayMetrics
+
         fun color(c: Context, res: Int) = ContextCompat.getColor(c, res)
 
         @SuppressLint("MissingPermission")
@@ -58,6 +65,14 @@ class UiTools {
             }.joinToString(", ")
         }
 
+        fun square(v: View) {
+            if (!::dm.isInitialized) return
+            v.layoutParams = (v.layoutParams as ConstraintLayout.LayoutParams).apply {
+                matchConstraintPercentHeight =
+                    (dm.widthPixels.toFloat() / dm.heightPixels) * matchConstraintPercentWidth
+            }
+        }
+
         fun wave(c: Context, v: View, res: Int) {
             if (v.parent !is ConstraintLayout) return
             val parent = v.parent as ConstraintLayout
@@ -88,6 +103,12 @@ class UiTools {
                 })
                 start()
             }
+        }
+
+        fun openProfile(c: AppCompatActivity, user: String) {
+            c.startActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse(Fetcher.Type.PROFILE.url.format(user)))
+            )
         }
     }
 }

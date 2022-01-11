@@ -7,11 +7,11 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.*
-import android.util.DisplayMetrics
 import android.view.ContextThemeWrapper
 import android.view.MotionEvent
 import android.view.View
 import android.widget.PopupMenu
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -22,6 +22,8 @@ import ir.mahdiparastesh.mobinaexplorer.view.ListUser
 import ir.mahdiparastesh.mobinaexplorer.view.Momentum
 import ir.mahdiparastesh.mobinaexplorer.view.UiTools
 import ir.mahdiparastesh.mobinaexplorer.view.UiTools.Companion.color
+import ir.mahdiparastesh.mobinaexplorer.view.UiTools.Companion.dm
+import ir.mahdiparastesh.mobinaexplorer.view.UiTools.Companion.square
 import ir.mahdiparastesh.mobinaexplorer.view.UiTools.Companion.vis
 import ir.mahdiparastesh.mobinaexplorer.view.UiWork
 
@@ -32,7 +34,6 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
     private lateinit var c: Context
     private lateinit var b: MainBinding
     private lateinit var exporter: Exporter
-    private lateinit var dm: DisplayMetrics
     var candidature: ArrayList<Candidate>? = null
     private var anStatus: ObjectAnimator? = null
     private var canScroll = 0
@@ -76,6 +77,17 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                             c.getString(R.string.summary).format(*(msg.obj as Array<String>))
                         )
                         .setNeutralButton(R.string.ok, null).create().show()
+                    Action.CHALLENGE.ordinal -> {
+                        Toast.makeText(
+                            c, getString(R.string.challengeDone, msg.obj as Int), Toast.LENGTH_LONG
+                        ).show()
+                        obtainMessage(Action.REFRESH.ordinal).sendToTarget()
+                    }
+                    Action.USER_LINK.ordinal -> (msg.obj as String?).apply {
+                        if (this != null)
+                            b.status.setOnClickListener { UiTools.openProfile(this@Panel, this) }
+                        else b.status.setOnClickListener(null)
+                    }
                 }
             }
         }
@@ -118,6 +130,8 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                             UiWork(c, Action.SUMMARY).start(); true; }
                         R.id.smExport -> {
                             exporter.launch(); true; }
+                        R.id.smChallenge -> {
+                            UiWork(c, Action.CHALLENGE).start(); true; }
                         else -> false
                     }
                 }
@@ -248,15 +262,8 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         vis(b.noCan, candidature!!.isEmpty())
     }
 
-    private fun square(v: View) {
-        v.layoutParams = (v.layoutParams as ConstraintLayout.LayoutParams).apply {
-            matchConstraintPercentHeight =
-                (dm.widthPixels.toFloat() / dm.heightPixels) * matchConstraintPercentWidth
-        }
-    }
-
     enum class Action {
-        CANDIDATES, REJECT, ACCEPT, CUSTOM_WORK, SUMMARY,
-        WAVE_UP, WAVE_DOWN, REFRESH
+        CANDIDATES, REJECT, ACCEPT, CUSTOM_WORK, SUMMARY, CHALLENGE,
+        WAVE_UP, WAVE_DOWN, REFRESH, USER_LINK
     }
 }

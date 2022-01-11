@@ -87,15 +87,17 @@ class Crawler(private val c: Explorer) : Thread() {
     }
 
     fun candidate(candidate: Candidate) {
-        try {
-            dao.addCandidate(candidate)
-        } catch (ignored: SQLiteConstraintException) {
-            dao.updateCandidate(candidate.apply {
-                val older = dao.candidate(candidate.id)
-                rejected = older.rejected
-            })
-        }
+        newCandidate(candidate, dao)
         Panel.handler?.obtainMessage(Panel.Action.REFRESH.ordinal)?.sendToTarget()
+    }
+
+    fun signal(status: Signal, vararg s: String) {
+        Explorer.handler.obtainMessage(Explorer.HANDLE_STATUS, status.s.format(*s))
+            .sendToTarget()
+        Panel.handler?.obtainMessage(Panel.Action.USER_LINK.ordinal, inspection?.nom?.user)
+            ?.sendToTarget()
+        if (status in arrayOf(Signal.SIGNED_OUT, Signal.VOLLEY_NOT_WORKING))
+            handler?.obtainMessage(HANDLE_STOP)?.sendToTarget()
     }
 
     override fun interrupt() {
@@ -141,11 +143,15 @@ class Crawler(private val c: Explorer) : Thread() {
         const val HANDLE_ERROR = 3
         const val HANDLE_STOP = 4
 
-        fun signal(status: Signal, vararg s: String) {
-            Explorer.handler.obtainMessage(Explorer.HANDLE_STATUS, status.s.format(*s))
-                .sendToTarget()
-            if (status in arrayOf(Signal.SIGNED_OUT, Signal.VOLLEY_NOT_WORKING))
-                handler?.obtainMessage(HANDLE_STOP)?.sendToTarget()
+        fun newCandidate(can: Candidate, dao: Database.DAO) {
+            try {
+                dao.addCandidate(can)
+            } catch (ignored: SQLiteConstraintException) {
+                dao.updateCandidate(can.apply {
+                    val older = dao.candidate(can.id)
+                    rejected = older.rejected
+                })
+            }
         }
 
         fun bytesSinceBoot() = TrafficStats.getUidRxBytes(Process.myUid()) +
@@ -180,7 +186,7 @@ class Crawler(private val c: Explorer) : Thread() {
         const val MED_PROXIMITY = (6).toByte() // {4, 5, 6} All followers/following will be searched
         const val MAX_PROXIMITY = (9).toByte() // {7, 8, 9} Some followers/following will be searched
         // 10+ step followers/following won't be fetched
-        val proximity = arrayOf("rasht", "resht", "gilan", "رشت", "گیلان")
+        val proximity = arrayOf("rasht", "resht", "gilan", "guilan", "رشت", "گیلان", "گیلک")
         val keywords = arrayOf("mobina", "مبینا", "1379", "79", "2000")
     }
 }

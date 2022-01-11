@@ -20,10 +20,13 @@
     <string name="summary">The database has %1\$s nominees.\n%2\$s percent have been analyzed.\n%3\$s percent have been followed.</string>
     <string name="ok">OK</string>
     <string name="smExport">Export</string>
+    <string name="smChallenge">Challenge</string>
+    <string name="challengeDone">Done! (%d)</string>
     <string name="exportDone">Done!</string>
     <string name="exportUndone">Failed!</string>
 
     <!-- ListUser -->
     <string name="cmReject">Reject</string>
     <string name="cmAccept">Accept</string>
+    <string name="noUsername">Their username couldn\'t be found!!</string>
 </resources>

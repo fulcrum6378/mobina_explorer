@@ -20,9 +20,9 @@ class Fetcher(
 ) : Request<ByteArray>(method, encode(url), Response.ErrorListener {
     Panel.handler?.obtainMessage(Panel.Action.WAVE_DOWN.ordinal)?.sendToTarget()
     if (doesErrorPersist < Crawler.maxTryAgain) {
-        Crawler.signal(Crawler.Signal.VOLLEY_ERROR, it.message.toString())
+        c.crawler.signal(Crawler.Signal.VOLLEY_ERROR, it.message.toString())
         Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
-    } else Crawler.signal(Crawler.Signal.VOLLEY_NOT_WORKING, it.message.toString())
+    } else c.crawler.signal(Crawler.Signal.VOLLEY_NOT_WORKING, it.message.toString())
     doesErrorPersist++
 }) {
     init {
