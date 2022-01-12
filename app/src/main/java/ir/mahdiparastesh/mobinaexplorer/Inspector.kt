@@ -4,6 +4,7 @@ import android.os.Handler
 import android.os.Message
 import com.android.volley.Request
 import com.google.gson.Gson
+import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.IN_PLACE
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MAX_PROXIMITY
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MED_PROXIMITY
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MIN_PROXIMITY
@@ -27,7 +28,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
     private val allPosts = arrayListOf<EdgePost>()
     private val l = c.crawler.handling.looper
 
-    private val handler = object : Handler(c.crawler.handling.looper) {
+    private val handler = object : Handler(l) {
         val ANALYZED = 0
         val FOLLOWERS = 1
         val FOLLOWING = 2
@@ -50,12 +51,8 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                     val res = msg.obj as List<Any>
                     addFollow(res[0] as List<Rest.User>, res[1] as HashMap<String, Rest.Friendship>)
                     c.crawler.signal(Signal.FOLLOWING_W, nom.user, "0")
-                    Delayer(c.crawler.handling.looper) {
-                        allFollow(
-                            Type.FOLLOWING,
-                            mutableListOf(),
-                            hashMapOf()
-                        )
+                    Delayer(l) {
+                        allFollow(Type.FOLLOWING, mutableListOf(), hashMapOf())
                     }
                 }
                 FOLLOWING -> {
@@ -80,9 +77,9 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         var shallFetch = true
 
         val scopes = arrayListOf(nom.user)
-        if (searchScopes(true, *scopes.toTypedArray()))
+        if (searchScopes(true, *scopes.toTypedArray()) && !forceAnalyze)
             revertProximity()
-        if (searchScopes(false, *scopes.toTypedArray())) {
+        if (searchScopes(false, *scopes.toTypedArray()) && !forceAnalyze) {
             qualify(null, Candidate.IN_PROFILE_TEXT, false)
             shallFetch = false
         }
@@ -91,20 +88,33 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             shallFetch = false
         }
 
-        if (shallFetch) Fetcher(c, Type.PROFILE.url.format(nom.user), Fetcher.Listener { html ->
+        if (shallFetch) Fetcher(c, Type.PROFILE.url.format(nom.user), Fetcher.Listener { baHtml ->
             if (!c.crawler.running) return@Listener
+            val html = Fetcher.decode(baHtml)
 
-            val cnf = Fetcher.decode(html).substringAfter(preConfig).substringBefore(posConfig)
             try {
+                val cnf = html.substringAfter(preConfig).substringBefore(posConfig)
+                if (nom.accs && cnf.contains(pvChanged))
+                    dao.updateNominee(nom.apply { accs = false })
                 u = Gson().fromJson(cnf, PageConfig::class.java).entry_data.ProfilePage[0]
                     .graphql.user
-                namusanSignedOut = 0
+                unknownError = 0
             } catch (e: Exception) { // JsonSyntaxException
-                namusanSignedOut++
-                if (namusanSignedOut < Crawler.maxTryAgain) {
-                    c.crawler.signal(Signal.INVALID_RESULT)
-                    Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
-                } else c.crawler.signal(Signal.SIGNED_OUT)
+                when {
+                    html.contains(userChanged) -> {
+                        c.crawler.signal(Signal.USER_CHANGED)
+                        Delayer(l) { repair() }
+                    }
+                    html.contains(signedOut) ->
+                        c.crawler.signal(Signal.SIGNED_OUT)
+                    else -> {
+                        unknownError++
+                        if (unknownError < Crawler.maxTryAgain) {
+                            c.crawler.signal(Signal.INVALID_RESULT)
+                            Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
+                        } else c.crawler.signal(Signal.UNKNOWN_ERROR)
+                    }
+                }
                 return@Listener
             }
             timeline = u.edge_owner_to_timeline_media!!
@@ -260,12 +270,10 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
 
     private fun addFollow(list: List<Rest.User>, fs: HashMap<String, Rest.Friendship>) {
         when (nom.proximity()) {
-            MIN_PROXIMITY -> list
+            IN_PLACE, MIN_PROXIMITY -> list
             MED_PROXIMITY, MAX_PROXIMITY ->
                 list.filter { preferredFollow(it, true) || preferredFollow(it, false) }
-            else -> throw IllegalStateException(
-                "Proximity must be either MIN_PROXIMITY, MED_PROXIMITY or MAX_PROXIMITY!"
-            )
+            else -> throw IllegalStateException("Unsupported proximity value!")
         }.forEach {
             val acs = !it.is_private || fs[it.pk]?.following == true
             c.crawler.nominate(
@@ -286,6 +294,23 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         dao.updateNominee(nom)
     }
 
+    private fun repair() {
+        if (!c.crawler.running) return
+        Fetcher(c, Type.POSTS.url.format(hash, nom.id, 1, ""), Fetcher.Listener { graphQl ->
+            try {
+                val newUn = Gson().fromJson(
+                    Fetcher.decode(graphQl), Rest.GraphQLResponse::class.java
+                ).data.user.edge_owner_to_timeline_media!!.edges[0].node.owner.username
+                dao.updateNominee(nom.apply { user = newUn })
+            } catch (ignored: java.lang.Exception) {
+                dao.deleteNominee(nom.id)
+                dao.deleteCandidate(nom.id)
+            } finally {
+                Delayer(l) { c.crawler.carryOn() }
+            }
+        })
+    }
+
     fun close() {
         db.close()
     }
@@ -296,7 +321,10 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         const val hash = "8c2a529969ee035a5063f2fc8602a0fd"
         private const val preFriend = "user_ids="
         private const val sepFriendId = ","
-        var namusanSignedOut = 0
+        private const val signedOut = "Log in • Instagram"
+        private const val userChanged = "Content unavailable &bull; Instagram"
+        private const val pvChanged = "This account is private"
+        var unknownError = 0
 
         @Suppress("LABEL_NAME_CLASH")
         fun search(c: Explorer, word: String) = Fetcher(c, Type.SEARCH.url.format(word),

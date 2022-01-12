@@ -4,11 +4,11 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import ir.mahdiparastesh.mobinaexplorer.Crawler
+import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.IN_PLACE
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MAX_PROXIMITY
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MED_PROXIMITY
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MIN_PROXIMITY
 
-@Suppress("SpellCheckingInspection")
 @Entity
 class Nominee(
     @PrimaryKey(autoGenerate = false) @ColumnInfo(name = "id") var id: Long,
@@ -34,6 +34,7 @@ class Nominee(
 
 
     fun proximity(): Byte? = when {
+        step <= IN_PLACE -> IN_PLACE
         step <= MIN_PROXIMITY -> MIN_PROXIMITY
         step <= MED_PROXIMITY -> MED_PROXIMITY
         step <= MAX_PROXIMITY -> MAX_PROXIMITY

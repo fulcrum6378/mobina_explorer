@@ -19,8 +19,16 @@ class Fetcher(
     private val body: String? = null
 ) : Request<ByteArray>(method, encode(url), Response.ErrorListener {
     Panel.handler?.obtainMessage(Panel.Action.WAVE_DOWN.ordinal)?.sendToTarget()
+
+    val code = it.networkResponse.statusCode
+    if (code == 404) {
+        c.crawler.signal(Crawler.Signal.PAGE_NOT_FOUND, code.toString())
+        Crawler.handler?.obtainMessage(Crawler.HANDLE_NOT_FOUND)?.sendToTarget()
+        return@ErrorListener
+    }
+
     if (doesErrorPersist < Crawler.maxTryAgain) {
-        c.crawler.signal(Crawler.Signal.VOLLEY_ERROR, it.message.toString())
+        c.crawler.signal(Crawler.Signal.VOLLEY_ERROR, code.toString())
         Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
     } else c.crawler.signal(Crawler.Signal.VOLLEY_NOT_WORKING, it.message.toString())
     doesErrorPersist++

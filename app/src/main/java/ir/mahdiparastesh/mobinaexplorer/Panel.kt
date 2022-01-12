@@ -41,6 +41,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
     companion object {
         const val DISABLED_ALPHA = .4f
         var handler: Handler? = null
+        var showRejected = false
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -93,18 +94,45 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         }
         handler?.obtainMessage(Action.WAVE_DOWN.ordinal)?.sendToTarget()
 
-        // Control the Foreground Service
+        // Robotic Start Button
+        square(b.start)
+        square(b.robot)
         Explorer.state.observe(this) { s -> exploring(s) }
         exploring(Explorer.state.value)
         b.start.setOnClickListener {
-            if (Explorer.state.value == Explorer.State.CHANGING) return@setOnClickListener
-            UiTools.shake(c)
-            startService(Intent(this, Explorer::class.java).apply {
-                if (Explorer.state.value == Explorer.State.ACTIVE) action = Explorer.Code.STOP.s
-            })
+            PopupMenu(ContextThemeWrapper(this, R.style.Theme_MobinaExplorer), it).apply {
+                setOnMenuItemClickListener { item ->
+                    when (item.itemId) {
+                        R.id.smStart -> toggle()
+                        R.id.smFollow -> {
+                            Explorer.shouldFollow = !item.isChecked; true; }
+                        R.id.smSummary -> {
+                            UiWork(c, Action.SUMMARY).start(); true; }
+                        R.id.smExport -> {
+                            exporter.launch(); true; }
+                        R.id.smChallenge -> {
+                            UiWork(c, Action.CHALLENGE).start(); true; }
+                        R.id.smShowRej -> {
+                            showRejected = !item.isChecked
+                            candidature()
+                            true
+                        }
+                        else -> false
+                    }
+                }
+                inflate(R.menu.start)
+                menu.findItem(R.id.smStart).title = getString(
+                    if (Explorer.state.value == Explorer.State.ACTIVE) R.string.smStop
+                    else R.string.smStart
+                )
+                menu.findItem(R.id.smFollow).isChecked = Explorer.shouldFollow
+                menu.findItem(R.id.smShowRej).isChecked = showRejected
+                show()
+            }
         }
-        square(b.start)
-        square(b.robot)
+        b.start.setOnLongClickListener { toggle() }
+
+        // Status
         Explorer.status.observe(this) { s ->
             b.status.text = s
             b.status.setTextColor(color(c, R.color.alarm))
@@ -119,27 +147,6 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                 })
                 start()
             }
-        }
-        b.start.setOnLongClickListener {
-            PopupMenu(ContextThemeWrapper(this, R.style.Theme_MobinaExplorer), it).apply {
-                setOnMenuItemClickListener { item ->
-                    when (item.itemId) {
-                        R.id.smFollow -> {
-                            Explorer.shouldFollow = !item.isChecked; true; }
-                        R.id.smSummary -> {
-                            UiWork(c, Action.SUMMARY).start(); true; }
-                        R.id.smExport -> {
-                            exporter.launch(); true; }
-                        R.id.smChallenge -> {
-                            UiWork(c, Action.CHALLENGE).start(); true; }
-                        else -> false
-                    }
-                }
-                inflate(R.menu.start)
-                menu.findItem(R.id.smFollow).isChecked = Explorer.shouldFollow
-                show()
-            }
-            true
         }
 
         // Candidates
@@ -159,6 +166,15 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
     override fun onDestroy() {
         handler = null
         super.onDestroy()
+    }
+
+    private fun toggle(): Boolean {
+        if (Explorer.state.value == Explorer.State.CHANGING) return false
+        UiTools.shake(c)
+        startService(Intent(this, Explorer::class.java).apply {
+            if (Explorer.state.value == Explorer.State.ACTIVE) action = Explorer.Code.STOP.s
+        })
+        return true
     }
 
     private var y = 0f
@@ -246,9 +262,8 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
     @SuppressLint("NotifyDataSetChanged")
     private fun arrangeList() {
         b.canSum.text = getString(
-            R.string.canSum, candidature!!.size,
-            candidature!!.filter { !it.rejected }.size,
-            candidature!!.filter { it.rejected }.size
+            if (!showRejected) R.string.canSum else R.string.canSumPlsRej,
+            candidature!!.size
         )
         candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_NOM_USER))
         candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_SCORE))

@@ -26,6 +26,12 @@ abstract class Database : RoomDatabase() {
         @Query("SELECT * FROM Nominee")
         fun nominees(): List<Nominee>
 
+        @Query("SELECT * FROM Nominee WHERE anal = 0")
+        fun naNominees(): List<Nominee>
+
+        @Query("SELECT * FROM Nominee WHERE anal = 0 AND fllw = 0")
+        fun noNominees(): List<Nominee>
+
         @Query("SELECT * FROM nominee WHERE user LIKE :user LIMIT 1")
         fun nominee(user: String): Nominee
 
@@ -38,9 +44,18 @@ abstract class Database : RoomDatabase() {
         @Update
         fun updateNominee(item: Nominee)
 
+        @Query("DELETE FROM Nominee WHERE id LIKE :id")
+        fun deleteNominee(id: Long) // throws nothing
+
 
         @Query("SELECT * FROM Candidate")
         fun candidates(): List<Candidate>
+
+        @Query("SELECT * FROM Candidate WHERE rejected = 0")
+        fun nrCandidates(): List<Candidate>
+
+        @Query("SELECT * FROM Candidate WHERE rejected = 1")
+        fun orCandidates(): List<Candidate>
 
         @Query("SELECT * FROM candidate WHERE id LIKE :id LIMIT 1")
         fun candidate(id: Long): Candidate
@@ -50,6 +65,9 @@ abstract class Database : RoomDatabase() {
 
         @Update
         fun updateCandidate(item: Candidate)
+
+        @Query("DELETE FROM Candidate WHERE id LIKE :id")
+        fun deleteCandidate(id: Long) // throws nothing
     }
 
     @SuppressLint("SdCardPath")
@@ -64,6 +82,7 @@ abstract class Database : RoomDatabase() {
             ).apply { if (mainThread) allowMainThreadQueries() }.build()
         }
 
+        @Suppress("unused")
         enum class Triple(val s: String) {
             MAIN(""), SHARED_MEMORY("-shm"), WRITE_AHEAD_LOG("-wal")
         }

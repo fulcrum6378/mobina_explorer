@@ -21,7 +21,7 @@ class UiWork(
         db = Database.DbFile.build(c).also { dao = it.dao() }
         val obj: Any? = when (work) {
             Action.CANDIDATES -> arrayListOf<Candidate>().apply {
-                dao.candidates().forEach {
+                (if (Panel.showRejected) dao.orCandidates() else dao.nrCandidates()).forEach {
                     add(it.apply { nominee = dao.nomineeById(it.id) })
                 }
             }
@@ -42,8 +42,8 @@ class UiWork(
                 add(if (sum != 0) sumCent(sum, noms.filter { it.fllw }.size).toString() else "0")
             }.toTypedArray()
             Action.CHALLENGE -> {
-                val candy = dao.nominees()
-                    .filter { !it.anal && Inspector.searchScopes(false, it.user, it.name) }
+                val candy = dao.naNominees()
+                    .filter { Inspector.searchScopes(false, it.user, it.name) }
                 for (can in candy) {
                     Crawler.newCandidate(
                         Candidate(can.id, -1f, Candidate.IN_PROFILE_TEXT, false), dao

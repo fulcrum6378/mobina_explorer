@@ -85,7 +85,7 @@ class GraphQL(val user: User) {
         val location: Location?,
         val media_overlay_info: Any?,
         val media_preview: Any?,
-        val owner: HashMap<String, String>,
+        val owner: Owner,
         val product_type: String,
         val sharing_friction_info: HashMap<String, *>,
         val shortcode: String,
@@ -96,6 +96,8 @@ class GraphQL(val user: User) {
         val video_url: String,
         val video_view_count: Float,
     )
+
+    class Owner(val id: String, val username: String)
 
     class EdgesCaption(val edges: Array<EdgeCaption>)
 

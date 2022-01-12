@@ -49,6 +49,11 @@ class Crawler(private val c: Explorer) : Thread() {
                         .apply { listener.onFinished(results) }
                     HANDLE_ERROR -> Delayer(handling.looper) { carryOn() }
                     HANDLE_STOP -> c.stopSelf()
+                    HANDLE_NOT_FOUND -> if (inspection != null) {
+                        dao.deleteNominee(inspection!!.nom.id)
+                        dao.deleteCandidate(inspection!!.nom.id)
+                        Delayer(handling.looper) { carryOn() }
+                    }
                 }
             }
         }
@@ -65,12 +70,13 @@ class Crawler(private val c: Explorer) : Thread() {
         inspection?.close()
         inspection = null
         if (!running) return
-        val preNoms = dao.nominees()
-        if (preNoms.isEmpty() || preNoms.all { it.anal }) proximity.random().apply {
+        val noNoms = dao.noNominees()
+        if (noNoms.isEmpty()) proximity.random().apply {
             signal(Signal.SEARCHING, this)
             Inspector.search(c, this)
-        } else preNoms.filter { !it.anal || !it.fllw }.random()
-            .apply { inspection = Inspector(c, this) }
+        } else noNoms.random().apply {
+            inspection = Inspector(c, this)
+        }
     }
 
     fun nominate(nominee: Nominee) {
@@ -119,10 +125,13 @@ class Crawler(private val c: Explorer) : Thread() {
         OFF(""),
         VOLLEY_ERROR("Volley Error: %s"),
         VOLLEY_NOT_WORKING("Sorry, but Volley doesn't work at all. Error: %s"),
+        PAGE_NOT_FOUND("Page not found..."),
         SEARCHING("Searching for the keyword \"%s\"..."),
         INSPECTING("Inspecting %s\'s profile..."),
+        USER_CHANGED("Their username has been changed! Preparing for reparation..."),
         INVALID_RESULT("Invalid result! Trying again..."),
         SIGNED_OUT("You're signed out :("),
+        UNKNOWN_ERROR("Unknown error!!!"),
         PROFILE_PHOTO("Analyzing %s's profile photo..."),
         START_POSTS("Found nothing :( Inspecting %s's posts..."),
         RESUME_POSTS("Fetching more posts from %1\$s (currently %2\$s)..."),
@@ -142,6 +151,7 @@ class Crawler(private val c: Explorer) : Thread() {
         const val HANDLE_INTERRUPT = 2
         const val HANDLE_ERROR = 3
         const val HANDLE_STOP = 4
+        const val HANDLE_NOT_FOUND = 5
 
         fun newCandidate(can: Candidate, dao: Database.DAO) {
             try {
@@ -160,6 +170,7 @@ class Crawler(private val c: Explorer) : Thread() {
         fun now() = Calendar.getInstance().timeInMillis
 
         fun maxPosts(prx: Byte?) = when (prx) {
+            IN_PLACE -> 12
             MIN_PROXIMITY -> 9
             MED_PROXIMITY -> 6
             MAX_PROXIMITY -> 3
@@ -167,6 +178,7 @@ class Crawler(private val c: Explorer) : Thread() {
         }
 
         fun maxFollow(prx: Byte?) = when (prx) {
+            IN_PLACE -> 10000
             MIN_PROXIMITY -> 2000
             MED_PROXIMITY -> 1500
             MAX_PROXIMITY -> 1000
@@ -174,17 +186,20 @@ class Crawler(private val c: Explorer) : Thread() {
         }
 
         fun maxSlides(prx: Byte?) = when (prx) {
-            MIN_PROXIMITY -> 9
+            IN_PLACE -> 10
+            MIN_PROXIMITY -> 8
             MED_PROXIMITY -> 6
-            MAX_PROXIMITY -> 3
+            MAX_PROXIMITY -> 4
             else -> 0
         }
 
         const val HUMAN_DELAY = 5000L
         const val maxTryAgain = 2
-        const val MIN_PROXIMITY = (3).toByte() // {0, 1, 2, 3} All followers/following will be nominated
-        const val MED_PROXIMITY = (6).toByte() // {4, 5, 6} All followers/following will be searched
-        const val MAX_PROXIMITY = (9).toByte() // {7, 8, 9} Some followers/following will be searched
+        const val IN_PLACE = (0).toByte() // 0
+        const val MIN_PROXIMITY = (3).toByte() // {1, 2, 3}
+        const val MED_PROXIMITY = (6).toByte() // {4, 5, 6}
+        const val MAX_PROXIMITY = (9).toByte() // {7, 8, 9}
+
         // 10+ step followers/following won't be fetched
         val proximity = arrayOf("rasht", "resht", "gilan", "guilan", "رشت", "گیلان", "گیلک")
         val keywords = arrayOf("mobina", "مبینا", "1379", "79", "2000")
