@@ -2,12 +2,14 @@ package ir.mahdiparastesh.mobinaexplorer.view
 
 import android.annotation.SuppressLint
 import android.icu.text.DecimalFormat
+import android.os.CountDownTimer
 import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.PopupMenu
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
+import ir.mahdiparastesh.mobinaexplorer.Crawler
 import ir.mahdiparastesh.mobinaexplorer.Panel
 import ir.mahdiparastesh.mobinaexplorer.R
 import ir.mahdiparastesh.mobinaexplorer.databinding.ListUserBinding
@@ -28,18 +30,19 @@ class ListUser(private val c: Panel) : RecyclerView.Adapter<ListUser.ViewHolder>
             DecimalFormat("#.##").format(c.candidature!![i].score * 100f) + "%"
         else "nominal"
         h.b.name.text = "${i + 1}. ${c.candidature!![i].nominee?.name} ($scr)"
+        val spot = c.candidature!![i].where
         val where = when {
-            c.candidature!![i].where == "P" -> "avatar"
-            c.candidature!![i].where == "PT" -> "bio"
-            c.candidature!![i].where.startsWith("T_") -> "post ${
+            spot == "P" -> "avatar"
+            spot == "PT" -> "bio"
+            spot.startsWith("T_") -> "post ${
                 try {
-                    c.candidature!![i].where.substring(2).toInt() + 1
+                    spot.substring(2).toInt() + 1
                 } catch (ignored: NumberFormatException) {
-                    c.candidature!![i].where.substring(2)
+                    spot.substring(2)
                 }
             } -> caption"
             else -> {
-                val pp = c.candidature!![i].where.split("_")
+                val pp = spot.split("_")
                 "post ${pp[0].toInt() + 1} -> slide ${pp[1].toInt() + 1}"
             }
         }
@@ -52,28 +55,35 @@ class ListUser(private val c: Panel) : RecyclerView.Adapter<ListUser.ViewHolder>
             else Toast.makeText(c, R.string.noUsername, Toast.LENGTH_SHORT).show()
         }
         h.b.root.setOnLongClickListener { v ->
-            PopupMenu(ContextThemeWrapper(c, R.style.Theme_MobinaExplorer), v).apply {
+            val rej = c.candidature!![h.layoutPosition].rejected
+            if (!rej)
+                UiWork(c, Panel.Action.REJECT, c.candidature!![h.layoutPosition]).start()
+            else PopupMenu(ContextThemeWrapper(c, R.style.Theme_MobinaExplorer), v).apply {
                 setOnMenuItemClickListener {
                     when (it.itemId) {
-                        R.id.cmReject -> {
-                            UiWork(
-                                c, Panel.Action.REJECT, c.candidature!![h.layoutPosition]
-                            ).start()
-                            true
-                        }
                         R.id.cmAccept -> {
                             UiWork(
                                 c, Panel.Action.ACCEPT, c.candidature!![h.layoutPosition]
-                            ).start()
-                            true
-                        }
+                            ).start(); true; }
+                        R.id.cmRepair -> {
+                            Crawler.handler?.let { handler ->
+                                handler.obtainMessage(
+                                    Crawler.HANDLE_REQ_REPAIR,
+                                    c.candidature!![h.layoutPosition].nominee
+                                ).sendToTarget()
+                                val wait = 5000L
+                                object : CountDownTimer(wait, wait) {
+                                    override fun onTick(millisUntilFinished: Long) {}
+                                    override fun onFinish() {
+                                        Panel.handler?.obtainMessage(Panel.Action.REFRESH.ordinal)
+                                            ?.sendToTarget()
+                                    }
+                                }.start()
+                            }; true; }
                         else -> false
                     }
                 }
-                inflate(
-                    if (!c.candidature!![h.layoutPosition].rejected) R.menu.can_normal
-                    else R.menu.can_rejected
-                )
+                inflate(R.menu.candidate)
                 show()
             }
             true

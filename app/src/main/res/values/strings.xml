@@ -30,7 +30,7 @@
     <string name="exportUndone">Failed!</string>
 
     <!-- ListUser -->
-    <string name="cmReject">Reject</string>
-    <string name="cmAccept">Accept</string>
+    <string name="cmAccept">Undo Reject</string>
+    <string name="cmRepair">Request Reparation</string>
     <string name="noUsername">Their username couldn\'t be found!!</string>
 </resources>

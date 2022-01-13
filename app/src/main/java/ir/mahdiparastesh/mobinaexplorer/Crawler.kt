@@ -9,6 +9,7 @@ import android.os.Message
 import android.os.Process
 import com.google.gson.Gson
 import com.google.gson.stream.JsonReader
+import ir.mahdiparastesh.mobinaexplorer.json.Rest
 import ir.mahdiparastesh.mobinaexplorer.misc.Delayer
 import ir.mahdiparastesh.mobinaexplorer.room.Candidate
 import ir.mahdiparastesh.mobinaexplorer.room.Database
@@ -16,7 +17,7 @@ import ir.mahdiparastesh.mobinaexplorer.room.Nominee
 import ir.mahdiparastesh.mobinaexplorer.room.Session
 import java.io.InputStreamReader
 
-class Crawler(private val c: Explorer) : Thread() {
+open class Crawler(private val c: Explorer) : Thread() {
     private lateinit var db: Database
     private lateinit var dao: Database.DAO
     private lateinit var session: Session
@@ -54,6 +55,7 @@ class Crawler(private val c: Explorer) : Thread() {
                         dao.deleteCandidate(inspection!!.nom.id)
                         Delayer(handling.looper) { carryOn() }
                     }
+                    HANDLE_REQ_REPAIR -> repair(msg.obj as Nominee)
                 }
             }
         }
@@ -106,6 +108,21 @@ class Crawler(private val c: Explorer) : Thread() {
             handler?.obtainMessage(HANDLE_STOP)?.sendToTarget()
     }
 
+    fun repair(nom: Nominee) {
+        Fetcher(c, Fetcher.Type.POSTS.url.format(Inspector.hash, nom.id, 1, ""),
+            Fetcher.Listener { graphQl ->
+                try {
+                    val newUn = Gson().fromJson(
+                        Fetcher.decode(graphQl), Rest.GraphQLResponse::class.java
+                    ).data.user.edge_owner_to_timeline_media!!.edges[0].node.owner.username
+                    dao.updateNominee(nom.apply { user = newUn })
+                } catch (ignored: java.lang.Exception) {
+                    dao.deleteNominee(nom.id)
+                    dao.deleteCandidate(nom.id)
+                }
+            })
+    }
+
     override fun interrupt() {
         running = false
         inspection?.close()
@@ -152,6 +169,7 @@ class Crawler(private val c: Explorer) : Thread() {
         const val HANDLE_ERROR = 3
         const val HANDLE_STOP = 4
         const val HANDLE_NOT_FOUND = 5
+        const val HANDLE_REQ_REPAIR = 6
 
         fun newCandidate(can: Candidate, dao: Database.DAO) {
             try {
@@ -170,8 +188,8 @@ class Crawler(private val c: Explorer) : Thread() {
         fun now() = Calendar.getInstance().timeInMillis
 
         fun maxPosts(prx: Byte?) = when (prx) {
-            IN_PLACE -> 12
-            MIN_PROXIMITY -> 9
+            IN_PLACE -> 11
+            MIN_PROXIMITY -> 8
             MED_PROXIMITY -> 6
             MAX_PROXIMITY -> 3
             else -> 0
@@ -202,6 +220,20 @@ class Crawler(private val c: Explorer) : Thread() {
 
         // 10+ step followers/following won't be fetched
         val proximity = arrayOf("rasht", "resht", "gilan", "guilan", "رشت", "گیلان", "گیلک")
-        val keywords = arrayOf("mobina", "مبینا", "1379", "79", "2000")
+        val superKeywords = arrayOf("mobina", "مبینا")
+        val otherKeywords = arrayOf("1379", "79", "2000")
+
+        @Suppress("SpellCheckingInspection")
+        val antiKeywords = arrayOf(
+            "abdul", "abolfazl", "ahmad", "ahmed", "ali", "babak", "benyamin", "davood", "david",
+            "davod", "ebrahim", "ebi", "mohammad", "mohamad", "hosein", "hossein", "hoseyn",
+            "hosseyn", "reza", "mahdi", "mehdi", "amir", "amin", "sadegh", "sadeq", "rahman",
+            "kumar", "esmail", "saeed", "saed", "ghasem", "rahmat", "arman", "javad", "koorosh",
+            "daryush", "saman",
+            "احمد", "عبد", "ابوالفضل", "ابولفضل", "علی", "بابک", "بنیامین", "داود", "داوود",
+            "ابراهیم", "ابی", "محمد", "حسین", "رضا", "مهدی", "امیر", "امین", "صادق", "رحمان",
+            "اسماعیل", "اسی", "سعید", "قاسم", "رحمت", "آرمان", "جواد", "کوروش", "داریوش", "سامان",
+            "0910", "0912", "0933"
+        )
     }
 }

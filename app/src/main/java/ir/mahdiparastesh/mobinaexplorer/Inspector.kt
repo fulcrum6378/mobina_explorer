@@ -8,8 +8,10 @@ import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.IN_PLACE
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MAX_PROXIMITY
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MED_PROXIMITY
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MIN_PROXIMITY
-import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.keywords
+import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.antiKeywords
+import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.otherKeywords
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.proximity
+import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.superKeywords
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Signal
 import ir.mahdiparastesh.mobinaexplorer.Fetcher.Type
 import ir.mahdiparastesh.mobinaexplorer.json.*
@@ -20,7 +22,7 @@ import ir.mahdiparastesh.mobinaexplorer.room.Database
 import ir.mahdiparastesh.mobinaexplorer.room.Nominee
 import java.util.*
 
-class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean = false) {
+open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean = false) {
     private var db: Database
     private lateinit var dao: Database.DAO
     private lateinit var u: User
@@ -76,7 +78,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         db = Database.DbFile.build(c).also { dao = it.dao() }
         var shallFetch = true
 
-        val scopes = arrayListOf(nom.user)
+        val scopes = arrayListOf<String?>(nom.user, nom.name)
         if (searchScopes(true, *scopes.toTypedArray()) && !forceAnalyze)
             revertProximity()
         if (searchScopes(false, *scopes.toTypedArray()) && !forceAnalyze) {
@@ -119,8 +121,13 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             }
             timeline = u.edge_owner_to_timeline_media!!
 
-            scopes.add(u.full_name)
-            scopes.add(u.biography ?: "")
+            if (nom.name != u.full_name) {
+                nom.name = u.full_name
+                dao.updateNominee(nom)
+                scopes.removeLast()
+                scopes.add(nom.name)
+            }
+            scopes.add(u.biography)
             if (searchScopes(true, *scopes.toTypedArray())) revertProximity()
             if (searchScopes(false, *scopes.toTypedArray())) {
                 qualify(null, Candidate.IN_PROFILE_TEXT)
@@ -296,19 +303,8 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
 
     private fun repair() {
         if (!c.crawler.running) return
-        Fetcher(c, Type.POSTS.url.format(hash, nom.id, 1, ""), Fetcher.Listener { graphQl ->
-            try {
-                val newUn = Gson().fromJson(
-                    Fetcher.decode(graphQl), Rest.GraphQLResponse::class.java
-                ).data.user.edge_owner_to_timeline_media!!.edges[0].node.owner.username
-                dao.updateNominee(nom.apply { user = newUn })
-            } catch (ignored: java.lang.Exception) {
-                dao.deleteNominee(nom.id)
-                dao.deleteCandidate(nom.id)
-            } finally {
-                Delayer(l) { c.crawler.carryOn() }
-            }
-        })
+        c.crawler.repair(nom)
+        Delayer(l) { Delayer(l) { c.crawler.carryOn() } }
     }
 
     fun close() {
@@ -355,13 +351,22 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             })
 
         fun searchScopes(prx: Boolean, vararg scopes: String?): Boolean {
-            var ret = false
-            (if (prx) proximity else keywords).forEach { kw ->
-                if (scopes.filterNotNull().any { scope ->
-                        scope.lowercase().contains(kw.lowercase())
-                    }) ret = true
+            for (wrd in scopes) {
+                if (wrd == null || wrd == "") continue
+                if (prx) for (kwd in proximity) {
+                    if (wrd.contains(kwd, true)) return true
+                } else {
+                    for (skw in superKeywords)
+                        if (wrd.contains(skw, true)) return true
+                    for (okw in otherKeywords) if (wrd.contains(okw, true)) {
+                        var ret = true
+                        for (akw in antiKeywords) if (wrd.contains(akw, true))
+                            ret = false
+                        if (ret) return true
+                    }
+                }
             }
-            return ret
+            return false
         }
     }
 }

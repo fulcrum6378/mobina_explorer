@@ -29,7 +29,7 @@ import ir.mahdiparastesh.mobinaexplorer.view.UiWork
 
 // adb connect 192.168.1.20:
 
-@SuppressLint("ClickableViewAccessibility")
+@SuppressLint("ClickableViewAccessibility", "NotifyDataSetChanged")
 class Panel : AppCompatActivity(), View.OnTouchListener {
     private lateinit var c: Context
     private lateinit var b: MainBinding
@@ -70,7 +70,8 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                         if (candidature != null) (msg.obj as Candidate).apply {
                             val fnd = Candidate.findPosInList(id, candidature!!)
                             if (fnd != -1) candidature!![fnd] = this
-                            arrangeList()
+                            b.candidature.adapter?.notifyDataSetChanged()
+                            canSum()
                         }
                     Action.SUMMARY.ordinal -> AlertDialog.Builder(this@Panel)
                         .setTitle(R.string.app_name)
@@ -82,7 +83,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                         Toast.makeText(
                             c, getString(R.string.challengeDone, msg.obj as Int), Toast.LENGTH_LONG
                         ).show()
-                        obtainMessage(Action.REFRESH.ordinal).sendToTarget()
+                        candidature()
                     }
                     Action.USER_LINK.ordinal -> (msg.obj as String?).apply {
                         if (this != null)
@@ -156,9 +157,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         }
         candidature()
 
-        /*UiWork(c, Action.CUSTOM_WORK, UiWork.CustomWork { dao ->
-            dao.nominees().forEach { dao.updateNominee(it.apply { anal = false }) }
-        }).start()*/
+        // UiWork(c, Action.CUSTOM_WORK, UiWork.CustomWork { dao -> }).start()
         // Thread { TfUtils.preTrain(c) }.start()
         // TfUtils.test(c, b.face, b.bytes)
     }
@@ -259,15 +258,10 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         UiWork(c, Action.CANDIDATES).start()
     }
 
-    @SuppressLint("NotifyDataSetChanged")
     private fun arrangeList() {
-        b.canSum.text = getString(
-            if (!showRejected) R.string.canSum else R.string.canSumPlsRej,
-            candidature!!.size
-        )
+        canSum()
         candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_NOM_USER))
         candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_SCORE))
-        candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_REJECTED))
         if (b.candidature.adapter == null) {
             val scr = canScroll
             b.candidature.adapter = ListUser(this@Panel)
@@ -275,6 +269,13 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         } else b.candidature.adapter?.notifyDataSetChanged()
 
         vis(b.noCan, candidature!!.isEmpty())
+    }
+
+    private fun canSum() {
+        b.canSum.text = getString(
+            if (!showRejected) R.string.canSum else R.string.canSumPlsRej,
+            candidature!!.filter { it.rejected == showRejected }.size
+        )
     }
 
     enum class Action {

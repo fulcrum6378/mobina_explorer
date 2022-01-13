@@ -5,7 +5,7 @@ import android.os.Looper
 import android.os.Message
 import android.os.SystemClock
 
-class Delayer(private val looper: Looper, private val listener: () -> Unit) {
+open class Delayer(private val looper: Looper, private val listener: () -> Unit) {
 
     private var mStopTimeInFuture = SystemClock.elapsedRealtime() + TIMEOUT
     private val mHandler = object : Handler(looper) {

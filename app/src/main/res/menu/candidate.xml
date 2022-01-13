@@ -3,4 +3,7 @@
     <item
         android:id="@+id/cmAccept"
         android:title="@string/cmAccept" />
+    <item
+        android:id="@+id/cmRepair"
+        android:title="@string/cmRepair" />
 </menu>
