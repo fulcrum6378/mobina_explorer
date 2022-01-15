@@ -359,10 +359,10 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
                     for (skw in superKeywords)
                         if (wrd.contains(skw, true)) return true
                     for (okw in otherKeywords) if (wrd.contains(okw, true)) {
-                        var fuck = false
+                        var ret = true
                         for (akw in antiKeywords) if (wrd.contains(akw, true))
-                            fuck = true
-                        if (fuck) return true
+                            ret = false
+                        if (ret) return true
                     }
                 }
             }
