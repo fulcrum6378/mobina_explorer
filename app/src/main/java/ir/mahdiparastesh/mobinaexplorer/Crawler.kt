@@ -72,7 +72,12 @@ open class Crawler(private val c: Explorer) : Thread() {
         inspection?.close()
         inspection = null
         if (!running) return
-        val noNoms = dao.noNominees()
+        var noNoms = if (!Panel.onlyPv) dao.noNominees() else dao.noPvNominees()
+        if (Panel.onlyPv && noNoms.isEmpty()) {
+            Panel.onlyPv = false
+            noNoms = dao.noNominees()
+            Panel.handler?.obtainMessage(Panel.Action.NO_REM_PV.ordinal)?.sendToTarget()
+        }
         if (noNoms.isEmpty()) proximity.random().apply {
             signal(Signal.SEARCHING, this)
             Inspector.search(c, this)

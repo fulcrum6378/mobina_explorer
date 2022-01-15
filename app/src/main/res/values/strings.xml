@@ -10,27 +10,31 @@
     <!-- Panel -->
     <string name="canSum">%d candidates</string>
     <string name="canSumPlsRej">%d rejected</string>
+    <string name="smStart">Start</string>
+    <string name="smStop">Stop</string>
+    <string name="smFollow">Follow</string>
+    <string name="smOnlyPv">Only Inaccessible</string>
+    <string name="noRemPv">No remaining inaccessible profiles!</string>
+    <string name="smSummary">Summary</string>
+    <string name="summary">The database has %1\$s nominees.\n%2\$s percent have been analyzed.\n%3\$s percent have been followed.</string>
+    <string name="smExport">Export</string>
+    <string name="exportDone">Done!</string>
+    <string name="exportUndone">Failed!</string>
+    <string name="smChallenge">Challenge</string>
+    <string name="challengeDone">Done! (%d)</string>
+    <string name="smShowRej">Show Rejected</string>
+
+    <!-- ListUser -->
+    <string name="cmAccept">Undo Reject</string>
+    <string name="cmRepair">Request Reparation</string>
+    <string name="noUsername">Their username couldn\'t be found!!</string>
+
+    <!-- #GLOBAL -->
     <string-array name="bytes">
         <item>B</item>
         <item>KB</item>
         <item>MG</item>
         <item>GB</item>
     </string-array>
-    <string name="smStart">Start</string>
-    <string name="smStop">Stop</string>
-    <string name="smFollow">Follow</string>
-    <string name="smSummary">Summary</string>
-    <string name="summary">The database has %1\$s nominees.\n%2\$s percent have been analyzed.\n%3\$s percent have been followed.</string>
     <string name="ok">OK</string>
-    <string name="smExport">Export</string>
-    <string name="smChallenge">Challenge</string>
-    <string name="challengeDone">Done! (%d)</string>
-    <string name="smShowRej">Show Rejected</string>
-    <string name="exportDone">Done!</string>
-    <string name="exportUndone">Failed!</string>
-
-    <!-- ListUser -->
-    <string name="cmAccept">Undo Reject</string>
-    <string name="cmRepair">Request Reparation</string>
-    <string name="noUsername">Their username couldn\'t be found!!</string>
 </resources>

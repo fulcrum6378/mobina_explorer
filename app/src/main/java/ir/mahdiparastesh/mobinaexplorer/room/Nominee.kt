@@ -14,7 +14,7 @@ class Nominee(
     @PrimaryKey(autoGenerate = false) @ColumnInfo(name = "id") var id: Long,
     @ColumnInfo(name = "user") var user: String,
     @ColumnInfo(name = "name") var name: String,
-    @ColumnInfo(name = "accs") var accs: Boolean, // Is their profile accessible?
+    @ColumnInfo(name = "accs") var accs: Boolean, // Is their profile accessible (!pv or followed)?
     @ColumnInfo(name = "step") var step: Byte,
     @ColumnInfo(name = "anal") var anal: Boolean, // Has their profile been analyzed?
     @ColumnInfo(name = "fllw") var fllw: Boolean, // Are their followers/following fetched?

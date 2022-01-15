@@ -9,6 +9,7 @@ import android.widget.TextView
 import com.google.gson.GsonBuilder
 import ir.mahdiparastesh.mobinaexplorer.Analyzer
 import ir.mahdiparastesh.mobinaexplorer.Analyzer.Companion.MODEL_SIZE
+import ir.mahdiparastesh.mobinaexplorer.view.UiTools
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -67,7 +68,7 @@ class TfUtils {
         }
 
         fun test(c: Context, iv: ImageView, tv: TextView, file: String = "1.jfif") {
-            val an = Analyzer(c)
+            val an = Analyzer(c, true)
             var data: ByteArray
             c.resources.assets.open(file).apply {
                 data = readBytes()
@@ -75,6 +76,7 @@ class TfUtils {
             }
             val bmp = Analyzer.barToBmp(data)
             an.Subject(bmp) {
+                UiTools.vis(iv)
                 iv.setImageBitmap(it?.cropped)
                 if (it == null) return@Subject
                 val sb = StringBuilder()

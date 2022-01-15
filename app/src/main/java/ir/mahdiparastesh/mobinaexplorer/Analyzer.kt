@@ -17,7 +17,7 @@ import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import kotlin.math.abs
 
-class Analyzer(val c: Context) {
+class Analyzer(val c: Context, val isTest: Boolean = false) {
     var model: ByteBuffer
     private val detector = FaceDetection.getClient(
         FaceDetectorOptions.Builder()
@@ -53,7 +53,8 @@ class Analyzer(val c: Context) {
                             val cropped = if (faces[ff].boundingBox != f.boundingBox)
                                 crop(this, faces[ff])
                             else this
-                            // if (results!!.cropped == null) results!!.cropped = cropped
+                            if (isTest && results!!.cropped == null)
+                                results!!.cropped = cropped
                             results!!.result(Result(compare(cropped)))
                             ff++
                         }
@@ -112,7 +113,7 @@ class Analyzer(val c: Context) {
         fun onFinished(results: Results?)
     }
 
-    class Results(
+    inner class Results(
         private val expect: Int, private val listener: OnFinished, var wryFaces: List<Face>
     ) : ArrayList<Result>() {
         private var reality = 0
@@ -139,12 +140,15 @@ class Analyzer(val c: Context) {
         // fun alike() = prob.indexOfFirst { it == max(prob.toList()) }
     }
 
-    class Transit(val listener: OnFinished, val results: Results?) {
+    inner class Transit(val listener: OnFinished, val results: Results?) {
         init {
             /*if (!results.isNullOrEmpty()) Log.println(Log.DEBUG, "ANALYZER",
                 "${Crawler.un} =>${Gson().toJson(Models.PLURAL.labels[results[0].like])}: " +
                     "${results[0].prob[results[0].like]}")*/
-            Crawler.handler?.obtainMessage(Crawler.HANDLE_ML_KIT, this)?.sendToTarget()
+            if (!isTest) Crawler.handler?.obtainMessage(Crawler.HANDLE_ML_KIT, this)
+                ?.sendToTarget()
+            else Panel.handler?.obtainMessage(Panel.Action.HANDLE_TEST.ordinal, this)
+                ?.sendToTarget()
         }
     }
 

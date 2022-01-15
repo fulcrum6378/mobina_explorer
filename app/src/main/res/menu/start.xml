@@ -4,11 +4,6 @@
         android:id="@+id/smStart"
         android:title="@string/smStart" />
     <item
-        android:id="@+id/smFollow"
-        android:checkable="true"
-        android:checked="true"
-        android:title="@string/smFollow" />
-    <item
         android:id="@+id/smSummary"
         android:title="@string/smSummary" />
     <item
@@ -17,6 +12,16 @@
     <item
         android:id="@+id/smChallenge"
         android:title="@string/smChallenge" />
+    <item
+        android:id="@+id/smFollow"
+        android:checkable="true"
+        android:checked="true"
+        android:title="@string/smFollow" />
+    <item
+        android:id="@+id/smOnlyPv"
+        android:checkable="true"
+        android:checked="false"
+        android:title="@string/smOnlyPv" />
     <item
         android:id="@+id/smShowRej"
         android:checkable="true"

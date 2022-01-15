@@ -42,6 +42,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         const val DISABLED_ALPHA = .4f
         var handler: Handler? = null
         var showRejected = false
+        var onlyPv = false
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -90,10 +91,13 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                             b.status.setOnClickListener { UiTools.openProfile(this@Panel, this) }
                         else b.status.setOnClickListener(null)
                     }
+                    Action.NO_REM_PV.ordinal ->
+                        Toast.makeText(c, R.string.noRemPv, Toast.LENGTH_LONG).show()
+                    Action.HANDLE_TEST.ordinal -> (msg.obj as Analyzer.Transit)
+                        .apply { listener.onFinished(results) }
                 }
             }
         }
-        handler?.obtainMessage(Action.WAVE_DOWN.ordinal)?.sendToTarget()
 
         // Robotic Start Button
         square(b.start)
@@ -107,6 +111,8 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                         R.id.smStart -> toggle()
                         R.id.smFollow -> {
                             Explorer.shouldFollow = !item.isChecked; true; }
+                        R.id.smOnlyPv -> {
+                            onlyPv = !item.isChecked; true; }
                         R.id.smSummary -> {
                             UiWork(c, Action.SUMMARY).start(); true; }
                         R.id.smExport -> {
@@ -127,6 +133,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                     else R.string.smStart
                 )
                 menu.findItem(R.id.smFollow).isChecked = Explorer.shouldFollow
+                menu.findItem(R.id.smOnlyPv).isChecked = onlyPv
                 menu.findItem(R.id.smShowRej).isChecked = showRejected
                 show()
             }
@@ -159,7 +166,8 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
 
         // UiWork(c, Action.CUSTOM_WORK, UiWork.CustomWork { dao -> }).start()
         // Thread { TfUtils.preTrain(c) }.start()
-        // TfUtils.test(c, b.face, b.bytes)
+        // TfUtils.test(c, b.face, b.bytes, "immobina_.jpg")
+        handler?.obtainMessage(Action.WAVE_DOWN.ordinal)?.sendToTarget()
     }
 
     override fun onDestroy() {
@@ -280,6 +288,6 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
 
     enum class Action {
         CANDIDATES, REJECT, ACCEPT, CUSTOM_WORK, SUMMARY, CHALLENGE,
-        WAVE_UP, WAVE_DOWN, REFRESH, USER_LINK
+        WAVE_UP, WAVE_DOWN, REFRESH, USER_LINK, NO_REM_PV, HANDLE_TEST
     }
 }

@@ -32,6 +32,9 @@ abstract class Database : RoomDatabase() {
         @Query("SELECT * FROM Nominee WHERE anal = 0 AND fllw = 0")
         fun noNominees(): List<Nominee>
 
+        @Query("SELECT * FROM Nominee WHERE anal = 0 AND fllw = 0 AND accs = 0")
+        fun noPvNominees(): List<Nominee>
+
         @Query("SELECT * FROM nominee WHERE user LIKE :user LIMIT 1")
         fun nominee(user: String): Nominee
 
