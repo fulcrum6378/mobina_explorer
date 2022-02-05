@@ -19,8 +19,8 @@ class GraphQL(val user: User) {
         val edge_followed_by: HashMap<String?, *>?,
         val edge_media_collections: HashMap<String?, *>?,
         val edge_mutual_followed_by: HashMap<String?, *>?,
-        val edge_owner_to_timeline_media: TimelineMedia?,
-        val edge_saved_media: HashMap<String?, *>?,
+        val edge_owner_to_timeline_media: Media?,
+        val edge_saved_media: Media?,
         val external_url: Any?,
         val external_url_linkshimmed: Any?,
         val fbid: String?,
@@ -53,7 +53,7 @@ class GraphQL(val user: User) {
         val username: String
     )
 
-    class TimelineMedia(val page_info: PageInfo, val count: Float, val edges: Array<EdgePost>)
+    class Media(val page_info: PageInfo, val count: Float, val edges: Array<EdgePost>)
 
     class PageInfo(val has_next_page: Boolean, val end_cursor: String)
 

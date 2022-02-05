@@ -77,14 +77,15 @@ class Fetcher(
         FOLLOWING("https://i.instagram.com/api/v1/friendships/%1\$s/following/?max_id=%2\$s"),
         FRIENDSHIPS("https://i.instagram.com/api/v1/friendships/show_many/"),
 
-        PROFILE("https://www.instagram.com/%s"),
+        PROFILE("https://www.instagram.com/%s/?__a=1"),
         POSTS(
-            "https://www.instagram.com/graphql/query/?query_hash=%1\$s&variables=" +
-                    "{\"id\":\"%2\$s\",\"first\":%3\$s,\"after\":\"%4\$s\"}"
+            "https://www.instagram.com/graphql/query/?query_hash=$postHash" +
+                    "&variables={\"id\":\"%2\$s\",\"first\":%3\$s,\"after\":\"%4\$s\"}"
         ),
     }
 
     companion object {
+        const val postHash = "8c2a529969ee035a5063f2fc8602a0fd"
         var doesErrorPersist = 0
 
         fun encode(uriString: String?): String? {

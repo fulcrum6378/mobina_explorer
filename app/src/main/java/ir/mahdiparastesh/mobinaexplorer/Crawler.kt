@@ -114,18 +114,17 @@ open class Crawler(private val c: Explorer) : Thread() {
     }
 
     fun repair(nom: Nominee) {
-        Fetcher(c, Fetcher.Type.POSTS.url.format(Inspector.hash, nom.id, 1, ""),
-            Fetcher.Listener { graphQl ->
-                try {
-                    val newUn = Gson().fromJson(
-                        Fetcher.decode(graphQl), Rest.GraphQLResponse::class.java
-                    ).data.user.edge_owner_to_timeline_media!!.edges[0].node.owner.username
-                    dao.updateNominee(nom.apply { user = newUn })
-                } catch (ignored: java.lang.Exception) {
-                    dao.deleteNominee(nom.id)
-                    dao.deleteCandidate(nom.id)
-                }
-            })
+        Fetcher(c, Fetcher.Type.POSTS.url.format(nom.id, 1, ""), Fetcher.Listener { graphQl ->
+            try {
+                val newUn = Gson().fromJson(
+                    Fetcher.decode(graphQl), Rest.GraphQLResponse::class.java
+                ).data.user.edge_owner_to_timeline_media!!.edges[0].node.owner.username
+                dao.updateNominee(nom.apply { user = newUn })
+            } catch (ignored: java.lang.Exception) {
+                dao.deleteNominee(nom.id)
+                dao.deleteCandidate(nom.id)
+            }
+        })
     }
 
     override fun interrupt() {
@@ -150,7 +149,7 @@ open class Crawler(private val c: Explorer) : Thread() {
         PAGE_NOT_FOUND("Page not found..."),
         SEARCHING("Searching for the keyword \"%s\"..."),
         INSPECTING("Inspecting %s\'s profile..."),
-        USER_CHANGED("Their username has been changed! Preparing for reparation..."),
+        //USER_CHANGED("Their username has been changed! Preparing for reparation..."),
         INVALID_RESULT("Invalid result! Trying again..."),
         SIGNED_OUT("You're signed out :("),
         UNKNOWN_ERROR("Unknown error!!!"),

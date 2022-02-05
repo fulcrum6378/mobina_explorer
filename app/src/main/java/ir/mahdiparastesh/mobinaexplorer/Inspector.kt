@@ -26,7 +26,7 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
     private var db: Database
     private lateinit var dao: Database.DAO
     private lateinit var u: User
-    private lateinit var timeline: TimelineMedia
+    private lateinit var timeline: Media
     private val allPosts = arrayListOf<EdgePost>()
     private val l = c.crawler.handling.looper
 
@@ -90,33 +90,30 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
             shallFetch = false
         }
 
-        if (shallFetch) Fetcher(c, Type.PROFILE.url.format(nom.user), Fetcher.Listener { baHtml ->
+        if (shallFetch) Fetcher(c, Type.PROFILE.url.format(nom.user), Fetcher.Listener { baPro ->
             if (!c.crawler.running) return@Listener
-            val html = Fetcher.decode(baHtml)
+            val profile = Fetcher.decode(baPro)
 
             try {
-                val cnf = html.substringAfter(preConfig).substringBefore(posConfig)
-                if (nom.accs && cnf.contains(pvChanged))
-                    dao.updateNominee(nom.apply { accs = false })
-                u = Gson().fromJson(cnf, PageConfig::class.java).entry_data.ProfilePage[0]
-                    .graphql.user
+                //if (nom.accs && cnf.contains(pvChanged)) dao.updateNominee(nom.apply { accs = false })
+                u = Gson().fromJson(profile, Profile::class.java).graphql.user
                 unknownError = 0
             } catch (e: Exception) { // JsonSyntaxException
-                when {
+                /*when {
                     html.contains(userChanged) -> {
                         c.crawler.signal(Signal.USER_CHANGED)
                         Delayer(l) { repair() }
                     }
                     html.contains(signedOut) ->
                         c.crawler.signal(Signal.SIGNED_OUT)
-                    else -> {
+                    else -> {*/
                         unknownError++
                         if (unknownError < Crawler.maxTryAgain) {
                             c.crawler.signal(Signal.INVALID_RESULT)
                             Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
                         } else c.crawler.signal(Signal.UNKNOWN_ERROR)
-                    }
-                }
+                    /*}
+                }*/
                 return@Listener
             }
             timeline = u.edge_owner_to_timeline_media!!
@@ -176,7 +173,7 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
         c.crawler.signal(Signal.RESUME_POSTS, nom.user, allPosts.size.toString())
         Delayer(l) {
             if (c.crawler.running) Fetcher(c,
-                Type.POSTS.url.format(hash, nom.id, allPosts.size, timeline.page_info.end_cursor),
+                Type.POSTS.url.format(nom.id, allPosts.size, timeline.page_info.end_cursor),
                 Fetcher.Listener { graphQl ->
                     u = Gson().fromJson(
                         Fetcher.decode(graphQl), Rest.GraphQLResponse::class.java
@@ -312,9 +309,6 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
     }
 
     companion object {
-        const val preConfig = "<script type=\"text/javascript\">window._sharedData = "
-        const val posConfig = ";</script>"
-        const val hash = "8c2a529969ee035a5063f2fc8602a0fd"
         private const val preFriend = "user_ids="
         private const val sepFriendId = ","
         private const val signedOut = "Log in • Instagram"
