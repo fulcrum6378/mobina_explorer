@@ -121,8 +121,8 @@ open class Crawler(private val c: Explorer) : Thread() {
                 ).data.user.edge_owner_to_timeline_media!!.edges[0].node.owner.username
                 dao.updateNominee(nom.apply { user = newUn })
             } catch (ignored: java.lang.Exception) {
-                dao.deleteNominee(nom.id)
-                dao.deleteCandidate(nom.id)
+                //dao.deleteNominee(nom.id)
+                //dao.deleteCandidate(nom.id)
             }
         })
     }
@@ -149,7 +149,6 @@ open class Crawler(private val c: Explorer) : Thread() {
         PAGE_NOT_FOUND("Page not found..."),
         SEARCHING("Searching for the keyword \"%s\"..."),
         INSPECTING("Inspecting %s\'s profile..."),
-        //USER_CHANGED("Their username has been changed! Preparing for reparation..."),
         INVALID_RESULT("Invalid result! Trying again..."),
         SIGNED_OUT("You're signed out :("),
         UNKNOWN_ERROR("Unknown error!!!"),
@@ -193,34 +192,34 @@ open class Crawler(private val c: Explorer) : Thread() {
 
         fun maxPosts(prx: Byte?) = when (prx) {
             IN_PLACE -> 11
-            MIN_PROXIMITY -> 8
-            MED_PROXIMITY -> 6
-            MAX_PROXIMITY -> 3
+            MIN_DISTANCE -> 8
+            MED_DISTANCE -> 6
+            MAX_DISTANCE -> 3
             else -> 0
         }
 
         fun maxFollow(prx: Byte?) = when (prx) {
-            IN_PLACE -> 10000
-            MIN_PROXIMITY -> 2000
-            MED_PROXIMITY -> 1500
-            MAX_PROXIMITY -> 1000
+            IN_PLACE -> 20000
+            MIN_DISTANCE -> 10000
+            MED_DISTANCE -> 5000
+            MAX_DISTANCE -> 1000
             else -> 0
         }
 
         fun maxSlides(prx: Byte?) = when (prx) {
-            IN_PLACE -> 10
-            MIN_PROXIMITY -> 8
-            MED_PROXIMITY -> 6
-            MAX_PROXIMITY -> 4
+            IN_PLACE -> 4
+            MIN_DISTANCE -> 3
+            MED_DISTANCE -> 2
+            MAX_DISTANCE -> 1
             else -> 0
         }
 
         const val HUMAN_DELAY = 5000L
         const val maxTryAgain = 2
         const val IN_PLACE = (0).toByte() // 0
-        const val MIN_PROXIMITY = (3).toByte() // {1, 2, 3}
-        const val MED_PROXIMITY = (6).toByte() // {4, 5, 6}
-        const val MAX_PROXIMITY = (9).toByte() // {7, 8, 9}
+        const val MIN_DISTANCE = (3).toByte() // {1, 2, 3}
+        const val MED_DISTANCE = (6).toByte() // {4, 5, 6}
+        const val MAX_DISTANCE = (9).toByte() // {7, 8, 9}
 
         // 10+ step followers/following won't be fetched
         val proximity = arrayOf(

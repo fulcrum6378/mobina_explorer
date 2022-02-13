@@ -12,15 +12,9 @@ android {
         minSdk 28
         targetSdk 31
         versionCode 1
-        versionName '2.9'
+        versionName '3.0'
     }
 
-    buildTypes {
-        debug {
-            minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8

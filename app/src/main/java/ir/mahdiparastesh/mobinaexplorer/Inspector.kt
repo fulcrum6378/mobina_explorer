@@ -4,17 +4,17 @@ import android.os.Handler
 import android.os.Message
 import com.android.volley.Request
 import com.google.gson.Gson
+import com.google.gson.JsonSyntaxException
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.IN_PLACE
-import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MAX_PROXIMITY
-import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MED_PROXIMITY
-import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MIN_PROXIMITY
+import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MAX_DISTANCE
+import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MED_DISTANCE
+import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MIN_DISTANCE
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.keywords
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.proximity
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Signal
 import ir.mahdiparastesh.mobinaexplorer.Fetcher.Type
 import ir.mahdiparastesh.mobinaexplorer.json.Follow
 import ir.mahdiparastesh.mobinaexplorer.json.GraphQL.*
-import ir.mahdiparastesh.mobinaexplorer.json.Profile
 import ir.mahdiparastesh.mobinaexplorer.json.Rest
 import ir.mahdiparastesh.mobinaexplorer.json.Search
 import ir.mahdiparastesh.mobinaexplorer.misc.Delayer
@@ -29,6 +29,7 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
     private lateinit var timeline: Media
     private val allPosts = arrayListOf<EdgePost>()
     private val l = c.crawler.handling.looper
+    private var whereIsMobina: String? = null
 
     private val handler = object : Handler(l) {
         val ANALYZED = 0
@@ -39,6 +40,8 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
         override fun handleMessage(msg: Message) {
             when (msg.what) {
                 ANALYZED -> {
+                    if (whereIsMobina != null)
+                        qualify(null, whereIsMobina!!)
                     if (!nom.anal)
                         dao.updateNominee(nom.analyzed())
                     val doNotWait = msg.obj == false
@@ -81,12 +84,10 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
         val scopes = arrayListOf<String?>(nom.user, nom.name)
         if (searchScopes(true, *scopes.toTypedArray()) && !forceAnalyze)
             revertProximity()
-        if (searchScopes(false, *scopes.toTypedArray()) && !forceAnalyze) {
-            qualify(null, Candidate.IN_PROFILE_TEXT, false)
-            shallFetch = false
-        }
+        if (searchScopes(false, *scopes.toTypedArray()) && !forceAnalyze)
+            whereIsMobina = Candidate.IN_PROFILE_TEXT
         if (shallFetch && nom.anal && !forceAnalyze) {
-            handler.obtainMessage(handler.ANALYZED).sendToTarget()
+            handler.obtainMessage(handler.ANALYZED, false).sendToTarget()
             shallFetch = false
         }
 
@@ -95,25 +96,17 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
             val profile = Fetcher.decode(baPro)
 
             try {
-                //if (nom.accs && cnf.contains(pvChanged)) dao.updateNominee(nom.apply { accs = false })
                 u = Gson().fromJson(profile, Profile::class.java).graphql.user
+                if (nom.accs && (u.is_private == true || u.blocked_by_viewer == true
+                            || u.has_blocked_viewer == true)
+                ) dao.updateNominee(nom.apply { accs = false })
                 unknownError = 0
-            } catch (e: Exception) { // JsonSyntaxException
-                /*when {
-                    html.contains(userChanged) -> {
-                        c.crawler.signal(Signal.USER_CHANGED)
-                        Delayer(l) { repair() }
-                    }
-                    html.contains(signedOut) ->
-                        c.crawler.signal(Signal.SIGNED_OUT)
-                    else -> {*/
+            } catch (e: JsonSyntaxException) {
                 unknownError++
                 if (unknownError < Crawler.maxTryAgain) {
                     c.crawler.signal(Signal.INVALID_RESULT)
                     Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
                 } else c.crawler.signal(Signal.UNKNOWN_ERROR)
-                /*}
-            }*/
                 return@Listener
             }
             timeline = u.edge_owner_to_timeline_media!!
@@ -126,14 +119,15 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
             }
             scopes.add(u.biography)
             if (searchScopes(true, *scopes.toTypedArray())) revertProximity()
-            if (searchScopes(false, *scopes.toTypedArray())) {
-                qualify(null, Candidate.IN_PROFILE_TEXT)
+            if (searchScopes(false, *scopes.toTypedArray()))
+                whereIsMobina = Candidate.IN_PROFILE_TEXT
+            else {
+                handler.obtainMessage(handler.ANALYZED).sendToTarget()
                 return@Listener
             }
 
             if (!c.crawler.running) return@Listener
-            var lookAt = u.profile_pic_url_hd
-            if (lookAt == null) lookAt = u.profile_pic_url
+            val lookAt = u.profile_pic_url_hd ?: u.profile_pic_url
             if (lookAt != null) {
                 c.crawler.signal(Signal.PROFILE_PHOTO, nom.user)
                 Fetcher(c, lookAt, Fetcher.Listener { img ->
@@ -201,8 +195,8 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
         if (searchScopes(true, node.location?.name, node.accessibility_caption))
             revertProximity()
         if (searchScopes(false, node.accessibility_caption)) {
-            qualify(null, Candidate.IN_POST_TEXT.format(analyzedPosts))
-            return
+            if (whereIsMobina == null)
+                whereIsMobina = Candidate.IN_POST_TEXT.format(analyzedPosts)
         }
 
         analSlide(i, arrayListOf(node.display_url).apply {
@@ -226,7 +220,7 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
             Fetcher(c, slides[ii], Fetcher.Listener { img ->
                 c.analyzer.Subject(img) { res ->
                     if (!res.isNullOrEmpty() && res.anyQualified())
-                        qualify(res, Candidate.IN_POST.format(analyzedPosts, ii))
+                        whereIsMobina = Candidate.IN_POST.format(analyzedPosts, ii)
                     else analSlide(i, slides, ii + 1)
                 }
             })
@@ -274,8 +268,8 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
 
     private fun addFollow(list: List<Rest.User>, fs: HashMap<String, Rest.Friendship>) {
         when (nom.proximity()) {
-            IN_PLACE, MIN_PROXIMITY -> list
-            MED_PROXIMITY, MAX_PROXIMITY ->
+            IN_PLACE, MIN_DISTANCE -> list
+            MED_DISTANCE, MAX_DISTANCE ->
                 list.filter { preferredFollow(it, true) || preferredFollow(it, false) }
             else -> throw IllegalStateException("Unsupported proximity value!")
         }.forEach {
@@ -298,12 +292,6 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
         dao.updateNominee(nom)
     }
 
-    private fun repair() {
-        if (!c.crawler.running) return
-        c.crawler.repair(nom)
-        Delayer(l) { Delayer(l) { c.crawler.carryOn() } }
-    }
-
     fun close() {
         db.close()
     }
@@ -311,9 +299,6 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
     companion object {
         private const val preFriend = "user_ids="
         private const val sepFriendId = ","
-        private const val signedOut = "Log in • Instagram"
-        private const val userChanged = "Content unavailable &bull; Instagram"
-        private const val pvChanged = "This account is private"
         var unknownError = 0
 
         @Suppress("LABEL_NAME_CLASH")

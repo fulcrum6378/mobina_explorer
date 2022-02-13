@@ -19,13 +19,19 @@ class Fetcher(
     private val body: String? = null
 ) : Request<ByteArray>(method, encode(url), Response.ErrorListener {
     Panel.handler?.obtainMessage(Panel.Action.WAVE_DOWN.ordinal)?.sendToTarget()
-
     val code = it.networkResponse.statusCode
-    if (code == 404) {
-        c.crawler.signal(Crawler.Signal.PAGE_NOT_FOUND, code.toString())
-        Crawler.handler?.obtainMessage(Crawler.HANDLE_NOT_FOUND)?.sendToTarget()
-        return@ErrorListener
-    }
+
+    when (code) {
+        404 -> {
+            c.crawler.signal(Crawler.Signal.PAGE_NOT_FOUND, code.toString())
+            Crawler.handler?.obtainMessage(Crawler.HANDLE_NOT_FOUND)?.sendToTarget()
+            return@ErrorListener
+        }
+        403 -> {
+            //throw Exception(String(it.networkResponse.data))
+            //return@ErrorListener
+        }
+    } // TODO: "Log in • Instagram"
 
     if (doesErrorPersist < Crawler.maxTryAgain) {
         c.crawler.signal(Crawler.Signal.VOLLEY_ERROR, code.toString())
@@ -92,7 +98,7 @@ class Fetcher(
             if (uriString == null) return null
             if (TextUtils.isEmpty(uriString)) return uriString
             val allowedUrlCharacters = Pattern.compile(
-                "([A-Za-z0-9_.~:/?\\#\\[\\]@!$&'()*+,;" + "=-]|%[0-9a-fA-F]{2})+"
+                "([A-Za-z0-9_.~:/?#\\[\\]@!$&'()*+,;" + "=-]|%[0-9a-fA-F]{2})+"
             )
             val matcher = allowedUrlCharacters.matcher(uriString)
             var validUri: String? = null

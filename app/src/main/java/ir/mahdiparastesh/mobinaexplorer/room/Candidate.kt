@@ -1,16 +1,15 @@
 package ir.mahdiparastesh.mobinaexplorer.room
 
-import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
 
 @Entity
 class Candidate(
-    @PrimaryKey(autoGenerate = false) @ColumnInfo(name = "id") var id: Long,
-    @ColumnInfo(name = "score") var score: Float,
-    @ColumnInfo(name = "where") var where: String,
-    @ColumnInfo(name = "rejected") var rejected: Boolean = false,
+    @PrimaryKey(autoGenerate = false) var id: Long,
+    var score: Float,
+    var where: String,
+    var rejected: Boolean = false,
     @Ignore var nominee: Nominee? = null
 ) {
     @Suppress("unused")

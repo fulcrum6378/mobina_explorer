@@ -164,7 +164,9 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         }
         candidature()
 
-        // UiWork(c, Action.CUSTOM_WORK, UiWork.CustomWork { dao -> }).start()
+        /*UiWork(c, Action.CUSTOM_WORK, UiWork.CustomWork { dao ->
+            dao.candidates().forEach { dao.updateCandidate(it.apply { rejected }) }
+        }).start()*/
         // Thread { TfUtils.preTrain(c) }.start()
         // TfUtils.test(c, b.face, b.bytes, Mobina(c).seventh)
         handler?.obtainMessage(Action.WAVE_DOWN.ordinal)?.sendToTarget()
