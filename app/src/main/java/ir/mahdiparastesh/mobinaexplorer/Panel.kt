@@ -27,6 +27,8 @@ import ir.mahdiparastesh.mobinaexplorer.view.UiTools.Companion.square
 import ir.mahdiparastesh.mobinaexplorer.view.UiTools.Companion.vis
 import ir.mahdiparastesh.mobinaexplorer.view.UiWork
 
+// adb connect 192.168.1.20:
+
 @SuppressLint("ClickableViewAccessibility", "NotifyDataSetChanged")
 class Panel : AppCompatActivity(), View.OnTouchListener {
     private lateinit var c: Context
@@ -164,7 +166,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
 
         // UiWork(c, Action.CUSTOM_WORK, UiWork.CustomWork { dao -> }).start()
         // Thread { TfUtils.preTrain(c) }.start()
-        // TfUtils.test(c, b.face, b.bytes, "immobina_.jpg")
+        // TfUtils.test(c, b.face, b.bytes, Mobina(c).seventh)
         handler?.obtainMessage(Action.WAVE_DOWN.ordinal)?.sendToTarget()
     }
 

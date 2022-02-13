@@ -223,21 +223,10 @@ open class Crawler(private val c: Explorer) : Thread() {
         const val MAX_PROXIMITY = (9).toByte() // {7, 8, 9}
 
         // 10+ step followers/following won't be fetched
-        val proximity = arrayOf("rasht", "resht", "gilan", "guilan", "رشت", "گیلان", "گیلک")
-        val superKeywords = arrayOf("mobina", "مبینا")
-        val otherKeywords = arrayOf("1379", "79", "2000")
-
-        @Suppress("SpellCheckingInspection")
-        val antiKeywords = arrayOf(
-            "abdul", "abolfazl", "ahmad", "ahmed", "ali", "babak", "benyamin", "davood", "david",
-            "davod", "ebrahim", "ebi", "mohammad", "mohamad", "hosein", "hossein", "hoseyn",
-            "hosseyn", "reza", "mahdi", "mehdi", "amir", "amin", "sadegh", "sadeq", "rahman",
-            "kumar", "esmail", "saeed", "saed", "ghasem", "rahmat", "arman", "javad", "koorosh",
-            "daryush", "saman",
-            "احمد", "عبد", "ابوالفضل", "ابولفضل", "علی", "بابک", "بنیامین", "داود", "داوود",
-            "ابراهیم", "ابی", "محمد", "حسین", "رضا", "مهدی", "امیر", "امین", "صادق", "رحمان",
-            "اسماعیل", "اسی", "سعید", "قاسم", "رحمت", "آرمان", "جواد", "کوروش", "داریوش", "سامان",
-            "0910", "0912", "0933"
+        val proximity = arrayOf(
+            "rasht", "resht", "gilan", "guilan", "رشت", "گیلان", "گیلک",
+            "qazvin", "gazvin", "ghazvin", "قزوین"
         )
+        val keywords = arrayOf("mobina", "مبینا")
     }
 }

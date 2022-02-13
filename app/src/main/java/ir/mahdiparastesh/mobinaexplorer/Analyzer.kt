@@ -28,7 +28,7 @@ class Analyzer(val c: Context, val isTest: Boolean = false) {
     )
 
     init {
-        c.resources.assets.openFd(MODEL.file).apply {
+        c.resources.assets.openFd(MODEL_FILE).apply {
             model = FileInputStream(fileDescriptor).channel
                 .map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
             close()
@@ -76,7 +76,7 @@ class Analyzer(val c: Context, val isTest: Boolean = false) {
 
         private fun compare(cropped: Bitmap): FloatArray {
             val input = arrayOf(TfUtils.tensor(cropped))
-            val output = Array(input.size) { FloatArray(MODEL.labels.size) }
+            val output = Array(input.size) { FloatArray(MODEL_PEOPLE.size) }
             Interpreter(model).use {
                 it.run(input, output)
                 it.close()
@@ -153,23 +153,22 @@ class Analyzer(val c: Context, val isTest: Boolean = false) {
     }
 
     companion object {
-        val MODEL = Models.PLURAL
+        const val MODEL_FILE = "hundred_epochs.tflite"
         const val MODEL_SIZE = 224
         const val CANDIDATURE = 0.08f
 
+        // A model trained in 50 epochs worked ~10 times better than a model trained in 5 epochs!
+        @Suppress("SpellCheckingInspection")
+        val MODEL_PEOPLE = arrayOf(
+            "Mobina", "aimi", "amin", "amir", "amirali", "ava_bizjak", "braydan",
+            "celina_krogmann", "dad", "david_laid", "diana_deets", "dominik", "elisany",
+            "elizabeth_debicki", "emily_feld", "hannah_min", "hannah_owo", "hasani", "hssp",
+            "jun_xi", "kiernan", "lay_heegaard", "mahdi", "mark", "maryam", "mina_vahid",
+            "mohaddeseh", "nana_pi", "natasha", "olivier", "pham", "queeny", "rike", "sara_kim",
+            "sarah_rae_mayne", "sophia_lariz", "sukaru", "vivian", "william", "yekoong"
+        )
+
         fun barToBmp(bar: ByteArray?): Bitmap? =
             if (bar != null) BitmapFactory.decodeByteArray(bar, 0, bar.size) else null
-    }
-
-    @Suppress("SpellCheckingInspection", "unused")
-    enum class Models(val file: String, val labels: Array<String>) {
-        PLURAL(
-            "mobina.tflite", arrayOf(
-                "Mobina", "aimi", "amin", "amir", "amirali", "ava", "dad", "diana", "dominik",
-                "elisany", "elizabeth", "emily_feld", "hannah", "hasani", "hssp", "jun", "mahdi",
-                "maryam", "mina_vahid", "mohaddeseh", "nana", "natasha", "olivier", "pham",
-                "queeny", "sara", "sarah", "vivian", "william"
-            )
-        )
     }
 }

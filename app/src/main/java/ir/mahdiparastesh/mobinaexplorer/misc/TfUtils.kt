@@ -6,15 +6,15 @@ import android.graphics.Color
 import android.graphics.Matrix
 import android.widget.ImageView
 import android.widget.TextView
-import com.google.gson.GsonBuilder
 import ir.mahdiparastesh.mobinaexplorer.Analyzer
 import ir.mahdiparastesh.mobinaexplorer.Analyzer.Companion.MODEL_SIZE
 import ir.mahdiparastesh.mobinaexplorer.view.UiTools
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.text.DecimalFormat
 
-@Suppress("unused")
+@Suppress("MemberVisibilityCanBePrivate", "unused")
 class TfUtils {
     companion object {
         fun tensor(rawBmp: Bitmap): Array<Array<FloatArray>> {
@@ -34,7 +34,7 @@ class TfUtils {
         )
 
         fun preTrain(c: Context) { // Put in a separate thread
-            val an = Analyzer(c)
+            val an = Analyzer(c, true)
             File(c.filesDir, "output").apply { if (!exists()) mkdir() }
             c.resources.assets.list("input")?.map { crush ->
                 var ci = 0
@@ -67,29 +67,33 @@ class TfUtils {
             bmp.recycle()
         }
 
-        fun test(c: Context, iv: ImageView, tv: TextView, file: String = "1.jfif") {
-            val an = Analyzer(c, true)
+        fun test(c: Context, iv: ImageView, tv: TextView, bmp: Bitmap) {
+            Analyzer(c, true).Subject(bmp) { res ->
+                UiTools.vis(iv)
+                iv.setImageBitmap(res?.cropped)
+                if (res == null) return@Subject
+                val list = arrayListOf<Pair<String, Float>>()
+                for (f in res[0].prob.indices) list.add(
+                    Analyzer.MODEL_PEOPLE[f]
+                        .replace("_", " ")
+                        .replaceFirstChar(Char::titlecase) to res[0].prob[f] * 100f
+                )
+                list.sortByDescending { it.second }
+                val sb = StringBuilder()
+                for (r in list)
+                    sb.append("${r.first}: ${DecimalFormat("#.###").format(r.second)}%\n")
+                tv.text = sb.toString()
+            }
+        }
+
+        fun test(c: Context, iv: ImageView, tv: TextView, file: String = "mobina/1.jfif") {
             var data: ByteArray
             c.resources.assets.open(file).apply {
                 data = readBytes()
                 close()
             }
             val bmp = Analyzer.barToBmp(data)
-            an.Subject(bmp) {
-                UiTools.vis(iv)
-                iv.setImageBitmap(it?.cropped)
-                if (it == null) return@Subject
-                val sb = StringBuilder()
-                for (r in it) sb.append(GsonBuilder().setPrettyPrinting().create().toJson(
-                    HashMap<String, Float>().apply {
-                        r.prob.forEachIndexed { i, fl ->
-                            this[Analyzer.MODEL.labels[i].replaceFirstChar(Char::titlecase)] = fl
-                        }
-                    }.toList().sortedBy { (_, fl) -> fl }.toMap()
-                )
-                ).append("\n")
-                tv.text = sb.toString()
-            }
+            if (bmp != null) test(c, iv, tv, bmp)
         }
     }
 }

@@ -1,6 +1,6 @@
 package ir.mahdiparastesh.mobinaexplorer.json
 
-@Suppress("unused", "SpellCheckingInspection")
+@Suppress("SpellCheckingInspection")
 class GraphQL(val user: User) {
     class User(
         val biography: String?,
@@ -124,12 +124,12 @@ class GraphQL(val user: User) {
         val __typename: String,
         val id: String,
         val gating_info: Any?,
-        val fact_check_overall_rating: Any?,
-        val fact_check_information: Any?,
-        val media_overlay_info: Any?,
-        val sensitivity_friction_info: Any?,
-        val sharing_friction_info: HashMap<String, *>?,
-        val dimensions: HashMap<String, Float>?,
+        //val fact_check_overall_rating: Any?,
+        //val fact_check_information: Any?,
+        //val media_overlay_info: Any?,
+        //val sensitivity_friction_info: Any?,
+        //val sharing_friction_info: HashMap<String, *>?,
+        //val dimensions: HashMap<String, Float>?,
         val display_url: String, // USE THIS
         val display_resources: Array<Src>
     )

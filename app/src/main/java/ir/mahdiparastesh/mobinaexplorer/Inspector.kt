@@ -8,19 +8,19 @@ import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.IN_PLACE
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MAX_PROXIMITY
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MED_PROXIMITY
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MIN_PROXIMITY
-import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.antiKeywords
-import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.otherKeywords
+import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.keywords
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.proximity
-import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.superKeywords
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Signal
 import ir.mahdiparastesh.mobinaexplorer.Fetcher.Type
-import ir.mahdiparastesh.mobinaexplorer.json.*
+import ir.mahdiparastesh.mobinaexplorer.json.Follow
 import ir.mahdiparastesh.mobinaexplorer.json.GraphQL.*
+import ir.mahdiparastesh.mobinaexplorer.json.Profile
+import ir.mahdiparastesh.mobinaexplorer.json.Rest
+import ir.mahdiparastesh.mobinaexplorer.json.Search
 import ir.mahdiparastesh.mobinaexplorer.misc.Delayer
 import ir.mahdiparastesh.mobinaexplorer.room.Candidate
 import ir.mahdiparastesh.mobinaexplorer.room.Database
 import ir.mahdiparastesh.mobinaexplorer.room.Nominee
-import java.util.*
 
 open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean = false) {
     private var db: Database
@@ -107,13 +107,13 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
                     html.contains(signedOut) ->
                         c.crawler.signal(Signal.SIGNED_OUT)
                     else -> {*/
-                        unknownError++
-                        if (unknownError < Crawler.maxTryAgain) {
-                            c.crawler.signal(Signal.INVALID_RESULT)
-                            Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
-                        } else c.crawler.signal(Signal.UNKNOWN_ERROR)
-                    /*}
-                }*/
+                unknownError++
+                if (unknownError < Crawler.maxTryAgain) {
+                    c.crawler.signal(Signal.INVALID_RESULT)
+                    Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
+                } else c.crawler.signal(Signal.UNKNOWN_ERROR)
+                /*}
+            }*/
                 return@Listener
             }
             timeline = u.edge_owner_to_timeline_media!!
@@ -349,16 +349,8 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
                 if (wrd == null || wrd == "") continue
                 if (prx) for (kwd in proximity) {
                     if (wrd.contains(kwd, true)) return true
-                } else {
-                    for (skw in superKeywords)
-                        if (wrd.contains(skw, true)) return true
-                    for (okw in otherKeywords) if (wrd.contains(okw, true)) {
-                        var ret = true
-                        for (akw in antiKeywords) if (wrd.contains(akw, true))
-                            ret = false
-                        if (ret) return true
-                    }
-                }
+                } else for (skw in keywords)
+                    if (wrd.contains(skw, true)) return true
             }
             return false
         }
