@@ -24,6 +24,7 @@ open class Crawler(private val c: Explorer) : Thread() {
     lateinit var headers: HashMap<String, String>
     lateinit var handling: HandlerThread
     private val preBytes = bytesSinceBoot()
+    private val queued = arrayListOf<Nominee>()
     private var inspection: Inspector? = null
     var running = false
 
@@ -68,21 +69,37 @@ open class Crawler(private val c: Explorer) : Thread() {
         //inspection = Inspector(c, dao.nominee(""), true)
     }
 
+    private fun queue() {
+        val toBeQueue = when {
+            Panel.onlyPv -> dao.nomineesPv()
+            !Explorer.shouldFollow -> dao.nomineesNf()
+            else -> dao.nominees()
+        }
+        if (toBeQueue.isEmpty()) {
+            if (Panel.onlyPv) {
+                Panel.onlyPv = false
+                Panel.handler?.obtainMessage(Panel.Action.NO_REM_PV.ordinal)?.sendToTarget()
+                carryOn()
+                return
+            } else proximity.random().apply {
+                signal(Signal.SEARCHING, this)
+                Inspector.search(c, this)
+            }
+            return; }
+        var preferred = toBeQueue.filter { Inspector.searchScopes(false, it.user, it.name) }
+        if (preferred.isEmpty())
+            preferred = toBeQueue.filter { Inspector.searchScopes(true, it.user, it.name) }
+        queued.addAll(preferred.ifEmpty { toBeQueue })
+    }
+
     fun carryOn() {
         inspection?.close()
         inspection = null
         if (!running) return
-        var noNoms = if (!Panel.onlyPv) dao.noNominees() else dao.noPvNominees()
-        if (Panel.onlyPv && noNoms.isEmpty()) {
-            Panel.onlyPv = false
-            noNoms = dao.noNominees()
-            Panel.handler?.obtainMessage(Panel.Action.NO_REM_PV.ordinal)?.sendToTarget()
-        }
-        if (noNoms.isEmpty()) proximity.random().apply {
-            signal(Signal.SEARCHING, this)
-            Inspector.search(c, this)
-        } else noNoms.random().apply {
-            inspection = Inspector(c, this)
+        if (queued.isEmpty()) queue()
+        (0 until queued.size).random().apply {
+            inspection = Inspector(c, queued[this])
+            queued.removeAt(this)
         }
     }
 
@@ -199,9 +216,9 @@ open class Crawler(private val c: Explorer) : Thread() {
         }
 
         fun maxFollow(prx: Byte?) = when (prx) {
-            IN_PLACE -> 20000
-            MIN_DISTANCE -> 10000
-            MED_DISTANCE -> 5000
+            IN_PLACE -> 10000
+            MIN_DISTANCE -> 6000
+            MED_DISTANCE -> 2000
             MAX_DISTANCE -> 1000
             else -> 0
         }
@@ -226,6 +243,6 @@ open class Crawler(private val c: Explorer) : Thread() {
             "rasht", "resht", "gilan", "guilan", "رشت", "گیلان", "گیلک",
             "qazvin", "gazvin", "ghazvin", "قزوین"
         )
-        val keywords = arrayOf("mobina", "مبینا")
+        val keywords = arrayOf("mobina", "مبینا", "مبینآ")
     }
 }

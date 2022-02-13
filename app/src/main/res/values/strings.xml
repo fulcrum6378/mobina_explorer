@@ -20,8 +20,6 @@
     <string name="smExport">Export</string>
     <string name="exportDone">Done!</string>
     <string name="exportUndone">Failed!</string>
-    <string name="smChallenge">Challenge</string>
-    <string name="challengeDone">Done! (%d)</string>
     <string name="smShowRej">Show Rejected</string>
 
     <!-- ListUser -->

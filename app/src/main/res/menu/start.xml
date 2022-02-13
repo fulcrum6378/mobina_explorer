@@ -10,9 +10,6 @@
         android:id="@+id/smExport"
         android:title="@string/smExport" />
     <item
-        android:id="@+id/smChallenge"
-        android:title="@string/smChallenge" />
-    <item
         android:id="@+id/smFollow"
         android:checkable="true"
         android:checked="true"

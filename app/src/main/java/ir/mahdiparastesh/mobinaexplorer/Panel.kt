@@ -80,12 +80,6 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                             c.getString(R.string.summary).format(*(msg.obj as Array<String>))
                         )
                         .setNeutralButton(R.string.ok, null).create().show()
-                    Action.CHALLENGE.ordinal -> {
-                        Toast.makeText(
-                            c, getString(R.string.challengeDone, msg.obj as Int), Toast.LENGTH_LONG
-                        ).show()
-                        candidature()
-                    }
                     Action.USER_LINK.ordinal -> (msg.obj as String?).apply {
                         if (this != null)
                             b.status.setOnClickListener { UiTools.openProfile(this@Panel, this) }
@@ -117,8 +111,6 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                             UiWork(c, Action.SUMMARY).start(); true; }
                         R.id.smExport -> {
                             exporter.launch(); true; }
-                        R.id.smChallenge -> {
-                            UiWork(c, Action.CHALLENGE).start(); true; }
                         R.id.smShowRej -> {
                             showRejected = !item.isChecked
                             candidature()
@@ -289,7 +281,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
     }
 
     enum class Action {
-        CANDIDATES, REJECT, ACCEPT, CUSTOM_WORK, SUMMARY, CHALLENGE,
+        CANDIDATES, REJECT, ACCEPT, CUSTOM_WORK, SUMMARY,
         WAVE_UP, WAVE_DOWN, REFRESH, USER_LINK, NO_REM_PV, HANDLE_TEST
     }
 }

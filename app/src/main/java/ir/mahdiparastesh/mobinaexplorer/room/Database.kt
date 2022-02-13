@@ -23,17 +23,17 @@ abstract class Database : RoomDatabase() {
         fun addSession(item: Session): Long
 
 
-        @Query("SELECT * FROM Nominee")
+        //@Query("SELECT * FROM Nominee")
+        //fun allNominees(): List<Nominee>
+
+        @Query("SELECT * FROM Nominee WHERE anal = 0 OR fllw = 0")
         fun nominees(): List<Nominee>
 
         @Query("SELECT * FROM Nominee WHERE anal = 0")
-        fun naNominees(): List<Nominee>
+        fun nomineesNf(): List<Nominee>
 
-        @Query("SELECT * FROM Nominee WHERE anal = 0 AND fllw = 0")
-        fun noNominees(): List<Nominee>
-
-        @Query("SELECT * FROM Nominee WHERE anal = 0 AND fllw = 0 AND accs = 0")
-        fun noPvNominees(): List<Nominee>
+        @Query("SELECT * FROM Nominee WHERE anal = 0 AND accs = 0")
+        fun nomineesPv(): List<Nominee>
 
         @Query("SELECT * FROM nominee WHERE user LIKE :user LIMIT 1")
         fun nominee(user: String): Nominee
@@ -48,7 +48,7 @@ abstract class Database : RoomDatabase() {
         fun updateNominee(item: Nominee)
 
         @Query("DELETE FROM Nominee WHERE id LIKE :id")
-        fun deleteNominee(id: Long) // throws nothing
+        fun deleteNominee(id: Long)
 
 
         @Query("SELECT * FROM Candidate")

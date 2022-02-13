@@ -29,7 +29,7 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
     private lateinit var timeline: Media
     private val allPosts = arrayListOf<EdgePost>()
     private val l = c.crawler.handling.looper
-    private var whereIsMobina: String? = null
+    private var qualified: Qualification? = null
 
     private val handler = object : Handler(l) {
         val ANALYZED = 0
@@ -40,17 +40,23 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
         override fun handleMessage(msg: Message) {
             when (msg.what) {
                 ANALYZED -> {
-                    if (whereIsMobina != null)
-                        qualify(null, whereIsMobina!!)
-                    if (!nom.anal)
-                        dao.updateNominee(nom.analyzed())
+                    if (qualified != null) {
+                        c.crawler.signal(Signal.QUALIFIED, nom.user)
+                        c.crawler.candidate(
+                            Candidate(
+                                nom.id, qualified?.res?.mobina() ?: -1f, qualified!!.where
+                            )
+                        )
+                    }
+                    if (!nom.anal) dao.updateNominee(nom.analyzed())
                     val doNotWait = msg.obj == false
                     if (nom.accs && nom.proximity() != null && !nom.fllw) {
                         if (Explorer.shouldFollow) {
-                            if (!qualified) c.crawler.signal(Signal.FOLLOWERS_W, nom.user, "0")
+                            if (qualified == null)
+                                c.crawler.signal(Signal.FOLLOWERS_W, nom.user, "0")
                             Delayer(l) { allFollow(Type.FOLLOWERS, mutableListOf(), hashMapOf()) }
-                        } else bye(done = false, signal = !qualified, wait = !doNotWait)
-                    } else bye(signal = !qualified, wait = !doNotWait)
+                        } else bye(done = false, signal = qualified == null, wait = !doNotWait)
+                    } else bye(signal = qualified == null, wait = !doNotWait)
                 }
                 FOLLOWERS -> {
                     val res = msg.obj as List<Any>
@@ -85,7 +91,7 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
         if (searchScopes(true, *scopes.toTypedArray()) && !forceAnalyze)
             revertProximity()
         if (searchScopes(false, *scopes.toTypedArray()) && !forceAnalyze)
-            whereIsMobina = Candidate.IN_PROFILE_TEXT
+            qualified = Qualification(null, Candidate.IN_PROFILE_TEXT)
         if (shallFetch && nom.anal && !forceAnalyze) {
             handler.obtainMessage(handler.ANALYZED, false).sendToTarget()
             shallFetch = false
@@ -120,7 +126,7 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
             scopes.add(u.biography)
             if (searchScopes(true, *scopes.toTypedArray())) revertProximity()
             if (searchScopes(false, *scopes.toTypedArray()))
-                whereIsMobina = Candidate.IN_PROFILE_TEXT
+                qualified = Qualification(null, Candidate.IN_PROFILE_TEXT)
             else {
                 handler.obtainMessage(handler.ANALYZED).sendToTarget()
                 return@Listener
@@ -132,21 +138,13 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
                 c.crawler.signal(Signal.PROFILE_PHOTO, nom.user)
                 Fetcher(c, lookAt, Fetcher.Listener { img ->
                     if (c.crawler.running) c.analyzer.Subject(img) { res ->
-                        if (res.isNullOrEmpty() || !res.anyQualified())
-                            fetchPosts(timeline.edges)
-                        else qualify(res, Candidate.IN_PROFILE)
+                        if (!res.isNullOrEmpty() && res.anyQualified())
+                            qualified = Qualification(res, Candidate.IN_PROFILE)
+                        fetchPosts(timeline.edges)
                     }
                 })
             } else fetchPosts(timeline.edges)
         })
-    }
-
-    var qualified = false
-    private fun qualify(res: Analyzer.Results?, type: String, shallWait: Boolean = true) {
-        qualified = true
-        c.crawler.signal(Signal.QUALIFIED, nom.user)
-        handler.obtainMessage(handler.ANALYZED, shallWait).sendToTarget()
-        c.crawler.candidate(Candidate(nom.id, res?.mobina() ?: -1f, type))
     }
 
     private fun fetchPosts(initial: Array<EdgePost>?) {
@@ -194,10 +192,8 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
         val node = timeline.edges[i].node
         if (searchScopes(true, node.location?.name, node.accessibility_caption))
             revertProximity()
-        if (searchScopes(false, node.accessibility_caption)) {
-            if (whereIsMobina == null)
-                whereIsMobina = Candidate.IN_POST_TEXT.format(analyzedPosts)
-        }
+        if (searchScopes(false, node.accessibility_caption) && qualified == null)
+            qualified = Qualification(null, Candidate.IN_POST_TEXT.format(analyzedPosts))
 
         analSlide(i, arrayListOf(node.display_url).apply {
             node.edge_sidecar_to_children?.let { slider ->
@@ -219,9 +215,10 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
         Delayer(l) {
             Fetcher(c, slides[ii], Fetcher.Listener { img ->
                 c.analyzer.Subject(img) { res ->
-                    if (!res.isNullOrEmpty() && res.anyQualified())
-                        whereIsMobina = Candidate.IN_POST.format(analyzedPosts, ii)
-                    else analSlide(i, slides, ii + 1)
+                    if (!res.isNullOrEmpty() && res.anyQualified() &&
+                        qualified?.where != Candidate.IN_PROFILE
+                    ) qualified = Qualification(res, Candidate.IN_POST.format(analyzedPosts, ii))
+                    analSlide(i, slides, ii + 1)
                 }
             })
         }
@@ -340,4 +337,6 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
             return false
         }
     }
+
+    data class Qualification(val res: Analyzer.Results?, val where: String)
 }
