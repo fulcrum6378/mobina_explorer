@@ -4,7 +4,6 @@ import android.os.Handler
 import android.os.Message
 import com.android.volley.Request
 import com.google.gson.Gson
-import com.google.gson.JsonSyntaxException
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.IN_PLACE
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MAX_DISTANCE
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MED_DISTANCE
@@ -22,7 +21,7 @@ import ir.mahdiparastesh.mobinaexplorer.room.Candidate
 import ir.mahdiparastesh.mobinaexplorer.room.Database
 import ir.mahdiparastesh.mobinaexplorer.room.Nominee
 
-open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean = false) {
+class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean = false) {
     private var db: Database
     private lateinit var dao: Database.DAO
     private lateinit var u: User
@@ -102,17 +101,13 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
             val profile = Fetcher.decode(baPro)
 
             try {
-                u = Gson().fromJson(profile, Profile::class.java).graphql.user
+                u = Gson().fromJson(profile, Profile::class.java).graphql.user!!
                 if (nom.accs && (u.is_private == true || u.blocked_by_viewer == true
                             || u.has_blocked_viewer == true)
                 ) dao.updateNominee(nom.apply { accs = false })
                 unknownError = 0
-            } catch (e: JsonSyntaxException) {
-                unknownError++
-                if (unknownError < Crawler.maxTryAgain) {
-                    c.crawler.signal(Signal.INVALID_RESULT)
-                    Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
-                } else c.crawler.signal(Signal.UNKNOWN_ERROR)
+            } catch (e: Exception) { // JsonSyntaxException or NullPointerException
+                invalidResult()
                 return@Listener
             }
             timeline = u.edge_owner_to_timeline_media!!
@@ -147,6 +142,14 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
         })
     }
 
+    private fun invalidResult() {
+        unknownError++
+        if (unknownError < Crawler.maxTryAgain) {
+            c.crawler.signal(Signal.INVALID_RESULT)
+            Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
+        } else c.crawler.signal(Signal.UNKNOWN_ERROR)
+    }
+
     private fun fetchPosts(initial: Array<EdgePost>?) {
         if (!c.crawler.running) return
         if (!nom.accs) {
@@ -167,12 +170,17 @@ open class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Bo
             if (c.crawler.running) Fetcher(c,
                 Type.POSTS.url.format(nom.id, allPosts.size, timeline.page_info.end_cursor),
                 Fetcher.Listener { graphQl ->
-                    u = Gson().fromJson(
-                        Fetcher.decode(graphQl), Rest.GraphQLResponse::class.java
-                    ).data.user
-                    timeline = u.edge_owner_to_timeline_media!!
-                    allPosts.addAll(timeline.edges)
-                    analPost()
+                    try {
+                        u = Gson().fromJson(
+                            Fetcher.decode(graphQl), Rest.GraphQLResponse::class.java
+                        ).data.user!!
+                        timeline = u.edge_owner_to_timeline_media!!
+                        allPosts.addAll(timeline.edges)
+                        analPost()
+                    } catch (e: Exception) { // JsonSyntaxException or NullPointerException
+                        invalidResult()
+                        return@Listener
+                    }
                 })
         }
     }

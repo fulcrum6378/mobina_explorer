@@ -153,9 +153,9 @@ class Analyzer(val c: Context, val isTest: Boolean = false) {
     }
 
     companion object {
-        const val MODEL_FILE = "hundred_epochs.tflite"
+        const val MODEL_FILE = "fifty_epochs.tflite"
         const val MODEL_SIZE = 224
-        const val CANDIDATURE = 0.08f
+        const val CANDIDATURE = 0.1f
 
         // A model trained in 50 epochs worked ~10 times better than a model trained in 5 epochs!
         @Suppress("SpellCheckingInspection")

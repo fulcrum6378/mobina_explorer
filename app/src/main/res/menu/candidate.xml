@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:id="@+id/cmAccept"
-        android:title="@string/cmAccept" />
+        android:id="@+id/cmInstagram"
+        android:title="@string/cmInstagram" />
+    <item
+        android:id="@+id/cmInstaTools"
+        android:title="@string/cmInstaTools" />
     <item
         android:id="@+id/cmRepair"
         android:title="@string/cmRepair" />

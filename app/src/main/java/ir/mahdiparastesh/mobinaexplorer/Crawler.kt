@@ -17,7 +17,7 @@ import ir.mahdiparastesh.mobinaexplorer.room.Nominee
 import ir.mahdiparastesh.mobinaexplorer.room.Session
 import java.io.InputStreamReader
 
-open class Crawler(private val c: Explorer) : Thread() {
+class Crawler(private val c: Explorer) : Thread() {
     private lateinit var db: Database
     private lateinit var dao: Database.DAO
     private lateinit var session: Session
@@ -126,7 +126,7 @@ open class Crawler(private val c: Explorer) : Thread() {
             .sendToTarget()
         Panel.handler?.obtainMessage(Panel.Action.USER_LINK.ordinal, inspection?.nom?.user)
             ?.sendToTarget()
-        if (status in arrayOf(Signal.SIGNED_OUT, Signal.VOLLEY_NOT_WORKING))
+        if (status in arrayOf(Signal.SIGNED_OUT, Signal.VOLLEY_NOT_WORKING, Signal.UNKNOWN_ERROR))
             handler?.obtainMessage(HANDLE_STOP)?.sendToTarget()
     }
 
@@ -135,9 +135,9 @@ open class Crawler(private val c: Explorer) : Thread() {
             try {
                 val newUn = Gson().fromJson(
                     Fetcher.decode(graphQl), Rest.GraphQLResponse::class.java
-                ).data.user.edge_owner_to_timeline_media!!.edges[0].node.owner.username
+                ).data.user!!.edge_owner_to_timeline_media!!.edges[0].node.owner.username
                 dao.updateNominee(nom.apply { user = newUn })
-            } catch (ignored: java.lang.Exception) {
+            } catch (ignored: Exception) {
                 //dao.deleteNominee(nom.id)
                 //dao.deleteCandidate(nom.id)
             }

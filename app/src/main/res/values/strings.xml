@@ -23,9 +23,9 @@
     <string name="smShowRej">Show Rejected</string>
 
     <!-- ListUser -->
-    <string name="cmAccept">Undo Reject</string>
+    <string name="cmInstagram">View in Instagram</string>
+    <string name="cmInstaTools">View in InstaTools</string>
     <string name="cmRepair">Request Reparation</string>
-    <string name="noUsername">Their username couldn\'t be found!!</string>
 
     <!-- #GLOBAL -->
     <string-array name="bytes">

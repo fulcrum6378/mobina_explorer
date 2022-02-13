@@ -1,13 +1,14 @@
 package ir.mahdiparastesh.mobinaexplorer.view
 
 import android.annotation.SuppressLint
+import android.content.ComponentName
+import android.content.Intent
 import android.icu.text.DecimalFormat
 import android.os.CountDownTimer
 import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.PopupMenu
-import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
 import ir.mahdiparastesh.mobinaexplorer.Crawler
 import ir.mahdiparastesh.mobinaexplorer.Panel
@@ -49,22 +50,28 @@ class ListUser(private val c: Panel) : RecyclerView.Adapter<ListUser.ViewHolder>
         h.b.user.text = "${c.candidature!![i].nominee?.user} -> $where"
 
         h.b.root.alpha = if (c.candidature!![i].rejected) Panel.DISABLED_ALPHA else 1f
-        h.b.root.setOnClickListener {
-            val un = c.candidature!![h.layoutPosition].nominee?.user
-            if (un != null) UiTools.openProfile(c, un)
-            else Toast.makeText(c, R.string.noUsername, Toast.LENGTH_SHORT).show()
-        }
-        h.b.root.setOnLongClickListener { v ->
-            val rej = c.candidature!![h.layoutPosition].rejected
-            if (!rej)
-                UiWork(c, Panel.Action.REJECT, c.candidature!![h.layoutPosition]).start()
-            else PopupMenu(ContextThemeWrapper(c, R.style.Theme_MobinaExplorer), v).apply {
+        h.b.root.setOnClickListener { v ->
+            PopupMenu(ContextThemeWrapper(c, R.style.Theme_MobinaExplorer), v).apply {
                 setOnMenuItemClickListener {
                     when (it.itemId) {
-                        R.id.cmAccept -> {
-                            UiWork(
-                                c, Panel.Action.ACCEPT, c.candidature!![h.layoutPosition]
-                            ).start(); true; }
+                        R.id.cmInstagram -> {
+                            UiTools.openProfile(c, c.candidature!![h.layoutPosition].nominee!!.user)
+                            true; }
+                        R.id.cmInstaTools -> {
+                            c.startActivity(Intent().apply {
+                                component = ComponentName(
+                                    "ir.mahdiparastesh.instatools",
+                                    "ir.mahdiparastesh.instatools.Viewer"
+                                )
+                                putExtra(
+                                    "EXTRA_USER", c.candidature!![h.layoutPosition].nominee!!.user
+                                )
+                                putExtra(
+                                    "EXTRA_ID", c.candidature!![h.layoutPosition].id.toString()
+                                )
+                            })// c.finish()
+                            true
+                        }
                         R.id.cmRepair -> {
                             Crawler.handler?.let { handler ->
                                 handler.obtainMessage(
@@ -86,6 +93,12 @@ class ListUser(private val c: Panel) : RecyclerView.Adapter<ListUser.ViewHolder>
                 inflate(R.menu.candidate)
                 show()
             }
+        }
+        h.b.root.setOnLongClickListener {
+            UiWork(
+                c, if (!c.candidature!![h.layoutPosition].rejected) Panel.Action.REJECT
+                else Panel.Action.ACCEPT, c.candidature!![h.layoutPosition]
+            ).start()
             true
         }
     }

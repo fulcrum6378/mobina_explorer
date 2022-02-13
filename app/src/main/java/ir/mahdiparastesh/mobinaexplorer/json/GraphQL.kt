@@ -1,7 +1,7 @@
 package ir.mahdiparastesh.mobinaexplorer.json
 
 @Suppress("SpellCheckingInspection")
-class GraphQL(val user: User) {
+class GraphQL(val user: User?) {
     class Profile(
         //val always_show_message_button_to_pro_account: Boolean,
         val graphql: GraphQL,
