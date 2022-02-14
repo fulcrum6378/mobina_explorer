@@ -179,7 +179,6 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S)
                         setImportantWhileForeground(true)
                     else setExpedited(true)
-                    //setPersisted(true)
                 }.build()
             ) else cancel(Explorer.JOB_ID)
         }

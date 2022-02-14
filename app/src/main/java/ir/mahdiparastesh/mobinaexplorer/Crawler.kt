@@ -117,9 +117,8 @@ class Crawler(private val c: Explorer) : Thread() {
         }
     }
 
-    fun candidate(candidate: Candidate) {
-        newCandidate(candidate, dao)
-        Panel.handler?.obtainMessage(Panel.Action.REFRESH.ordinal)?.sendToTarget()
+    fun candidate(candidate: Candidate) = newCandidate(candidate, dao).also {
+        if (it) Panel.handler?.obtainMessage(Panel.Action.REFRESH.ordinal)?.sendToTarget()
     }
 
     fun signal(status: Signal, vararg s: String) {
@@ -192,15 +191,16 @@ class Crawler(private val c: Explorer) : Thread() {
         const val HANDLE_NOT_FOUND = 5
         const val HANDLE_REQ_REPAIR = 6
 
-        fun newCandidate(can: Candidate, dao: Database.DAO) {
-            try {
-                dao.addCandidate(can)
-            } catch (ignored: SQLiteConstraintException) {
-                dao.updateCandidate(can.apply {
-                    val older = dao.candidate(can.id)
-                    rejected = older.rejected
-                })
-            }
+        fun newCandidate(can: Candidate, dao: Database.DAO): Boolean = try {
+            dao.addCandidate(can)
+            true
+        } catch (ignored: SQLiteConstraintException) {
+            dao.updateCandidate(can.apply {
+                val older = dao.candidate(can.id)
+                rejected = older.rejected
+                if (older.score > score) score = older.score
+            })
+            false
         }
 
         fun bytesSinceBoot() = TrafficStats.getUidRxBytes(Process.myUid()) +

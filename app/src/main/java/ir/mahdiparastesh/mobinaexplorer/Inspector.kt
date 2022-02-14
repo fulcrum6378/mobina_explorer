@@ -39,23 +39,19 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         override fun handleMessage(msg: Message) {
             when (msg.what) {
                 ANALYZED -> {
-                    if (qualified != null) {
-                        c.crawler.signal(Signal.QUALIFIED, nom.user)
-                        c.crawler.candidate(
-                            Candidate(
-                                nom.id, qualified?.res?.mobina() ?: -1f, qualified!!.where
-                            )
-                        )
-                    }
+                    val newlyQualified = qualified != null && c.crawler.candidate(
+                        Candidate(nom.id, qualified?.res?.mobina() ?: -1f, qualified!!.where)
+                    )
+                    if (newlyQualified) c.crawler.signal(Signal.QUALIFIED, nom.user)
                     if (!nom.anal) dao.updateNominee(nom.analyzed())
                     val doNotWait = msg.obj == false
                     if (nom.accs && nom.proximity() != null && !nom.fllw) {
                         if (Explorer.shouldFollow) {
-                            if (qualified == null)
+                            if (!newlyQualified)
                                 c.crawler.signal(Signal.FOLLOWERS_W, nom.user, "0")
                             Delayer(l) { allFollow(Type.FOLLOWERS, mutableListOf(), hashMapOf()) }
-                        } else bye(done = false, signal = qualified == null, wait = !doNotWait)
-                    } else bye(signal = qualified == null, wait = !doNotWait)
+                        } else bye(done = false, signal = !newlyQualified, wait = !doNotWait)
+                    } else bye(signal = !newlyQualified, wait = !doNotWait)
                 }
                 FOLLOWERS -> {
                     val res = msg.obj as List<Any>

@@ -11,21 +11,30 @@ import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
+import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.MutableLiveData
-
-// Android sometimes kills the process when the activities are closed and sometimes delays in it.
-// That's why InstaTools and Mobina Explorer could work sometimes.
 
 @SuppressLint("UnspecifiedImmutableFlag")
 class Explorer : JobService() {
     private lateinit var c: Context
+    private var wakeLock: PowerManager.WakeLock? = null
     lateinit var analyzer: Analyzer
     lateinit var crawler: Crawler
 
-    override fun onStartJob(params: JobParameters?): Boolean {
+    @SuppressLint("WakelockTimeout")
+    override fun onStartJob(params: JobParameters): Boolean {
         state.value = State.CHANGING
         c = applicationContext
+
+        // In order for the service to be able to persist in when the activities are destroyed:
+        // Go to app settings -> battery -> allow background activity and also...
+        // Remove the app from the "Optimized battery usage" apps list.
+        wakeLock = (getSystemService(Context.POWER_SERVICE) as PowerManager).run {
+            newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Explorer::lock").apply {
+                acquire()
+            }
+        }
 
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
             .createNotificationChannel(
@@ -59,8 +68,9 @@ class Explorer : JobService() {
         return true
     }
 
-    override fun onStopJob(parameters: JobParameters?): Boolean {
+    override fun onStopJob(parameters: JobParameters): Boolean {
         state.value = State.CHANGING
+        wakeLock?.let { if (it.isHeld) it.release() }
         stopForeground(true)
         crawler.interrupt()
         System.gc()
