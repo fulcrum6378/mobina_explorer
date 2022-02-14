@@ -18,7 +18,8 @@
         android:id="@+id/smOnlyPv"
         android:checkable="true"
         android:checked="false"
-        android:title="@string/smOnlyPv" />
+        android:title="@string/smOnlyPv"
+        android:visible="false" />
     <item
         android:id="@+id/smShowRej"
         android:checkable="true"

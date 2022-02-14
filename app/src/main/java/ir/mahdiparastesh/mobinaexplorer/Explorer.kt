@@ -4,34 +4,27 @@ import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.app.Service
+import android.app.job.JobParameters
+import android.app.job.JobService
 import android.content.Context
 import android.content.Intent
 import android.os.Handler
-import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.MutableLiveData
 
+// Android sometimes kills the process when the activities are closed and sometimes delays in it.
+// That's why InstaTools and Mobina Explorer could work sometimes.
+
 @SuppressLint("UnspecifiedImmutableFlag")
-class Explorer : Service() {
+class Explorer : JobService() {
     private lateinit var c: Context
     lateinit var analyzer: Analyzer
     lateinit var crawler: Crawler
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        super.onStartCommand(intent, flags, startId)
-        if (intent?.action != null && state.value != State.CHANGING) when (intent.action) {
-            Code.STOP.s -> if (state.value == State.ACTIVE)
-                stopSelf()
-        }
-        return START_NOT_STICKY
-    }
-
-    override fun onCreate() {
+    override fun onStartJob(params: JobParameters?): Boolean {
         state.value = State.CHANGING
-        super.onCreate()
         c = applicationContext
 
         (getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
@@ -63,20 +56,20 @@ class Explorer : Service() {
         analyzer = Analyzer(c)
         crawler = Crawler(this).also { it.start() }
         state.value = State.ACTIVE
+        return true
     }
 
-    override fun onDestroy() {
+    override fun onStopJob(parameters: JobParameters?): Boolean {
         state.value = State.CHANGING
         stopForeground(true)
         crawler.interrupt()
-        super.onDestroy()
         System.gc()
         state.value = State.OFF
+        return false
     }
 
-    override fun onBind(intent: Intent?): IBinder? = null
-
     companion object {
+        const val JOB_ID = 103
         const val CH_ID = 103
         const val HANDLE_STATUS = 0
         lateinit var handler: Handler
@@ -84,6 +77,7 @@ class Explorer : Service() {
         val state = MutableLiveData(State.OFF)
         val status = MutableLiveData(Crawler.Signal.OFF.s)
         var shouldFollow = false
+        var onlyPv = false
 
         fun pi(c: Context, code: Code): PendingIntent = PendingIntent.getService(
             c, 0, Intent(c, Explorer::class.java).apply { action = code.s },

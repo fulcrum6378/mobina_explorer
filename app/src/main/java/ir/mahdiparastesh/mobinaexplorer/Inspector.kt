@@ -133,9 +133,10 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                 c.crawler.signal(Signal.PROFILE_PHOTO, nom.user)
                 Fetcher(c, lookAt, Fetcher.Listener { img ->
                     if (c.crawler.running) c.analyzer.Subject(img) { res ->
-                        if (!res.isNullOrEmpty() && res.anyQualified())
+                        if (!res.isNullOrEmpty() && res.anyQualified()) {
                             qualified = Qualification(res, Candidate.IN_PROFILE)
-                        fetchPosts(timeline.edges)
+                            handler.obtainMessage(handler.ANALYZED).sendToTarget()
+                        } else fetchPosts(timeline.edges)
                     }
                 })
             } else fetchPosts(timeline.edges)
@@ -223,10 +224,10 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         Delayer(l) {
             Fetcher(c, slides[ii], Fetcher.Listener { img ->
                 c.analyzer.Subject(img) { res ->
-                    if (!res.isNullOrEmpty() && res.anyQualified() &&
-                        qualified?.where != Candidate.IN_PROFILE
-                    ) qualified = Qualification(res, Candidate.IN_POST.format(analyzedPosts, ii))
-                    analSlide(i, slides, ii + 1)
+                    if (!res.isNullOrEmpty() && res.anyQualified()) {
+                        qualified = Qualification(res, Candidate.IN_POST.format(analyzedPosts, ii))
+                        handler.obtainMessage(handler.ANALYZED).sendToTarget()
+                    } else analSlide(i, slides, ii + 1)
                 }
             })
         }
@@ -336,7 +337,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
 
         fun searchScopes(prx: Boolean, vararg scopes: String?): Boolean {
             for (wrd in scopes) {
-                if (wrd == null || wrd == "") continue
+                if (wrd.isNullOrBlank()) continue
                 if (prx) for (kwd in proximity) {
                     if (wrd.contains(kwd, true)) return true
                 } else for (skw in keywords)

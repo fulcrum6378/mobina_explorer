@@ -23,8 +23,8 @@ abstract class Database : RoomDatabase() {
         fun addSession(item: Session): Long
 
 
-        //@Query("SELECT * FROM Nominee")
-        //fun allNominees(): List<Nominee>
+        @Query("SELECT * FROM Nominee")
+        fun allNominees(): List<Nominee>
 
         @Query("SELECT * FROM Nominee WHERE anal = 0 OR fllw = 0")
         fun nominees(): List<Nominee>
@@ -34,6 +34,9 @@ abstract class Database : RoomDatabase() {
 
         @Query("SELECT * FROM Nominee WHERE anal = 0 AND accs = 0")
         fun nomineesPv(): List<Nominee>
+
+        @Query("SELECT * FROM Nominee WHERE anal = 1")
+        fun anNominees(): List<Nominee>
 
         @Query("SELECT * FROM nominee WHERE user LIKE :user LIMIT 1")
         fun nominee(user: String): Nominee

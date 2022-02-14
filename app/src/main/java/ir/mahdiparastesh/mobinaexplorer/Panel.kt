@@ -4,8 +4,10 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
+import android.app.job.JobInfo
+import android.app.job.JobScheduler
+import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
 import android.os.*
 import android.view.ContextThemeWrapper
 import android.view.MotionEvent
@@ -42,7 +44,6 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         const val DISABLED_ALPHA = .4f
         var handler: Handler? = null
         var showRejected = false
-        var onlyPv = false
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -106,7 +107,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                         R.id.smFollow -> {
                             Explorer.shouldFollow = !item.isChecked; true; }
                         R.id.smOnlyPv -> {
-                            onlyPv = !item.isChecked; true; }
+                            Explorer.onlyPv = !item.isChecked; true; }
                         R.id.smSummary -> {
                             UiWork(c, Action.SUMMARY).start(); true; }
                         R.id.smExport -> {
@@ -125,7 +126,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
                     else R.string.smStart
                 )
                 menu.findItem(R.id.smFollow).isChecked = Explorer.shouldFollow
-                menu.findItem(R.id.smOnlyPv).isChecked = onlyPv
+                menu.findItem(R.id.smOnlyPv).isChecked = Explorer.onlyPv
                 menu.findItem(R.id.smShowRej).isChecked = showRejected
                 show()
             }
@@ -156,9 +157,7 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         }
         candidature()
 
-        /*UiWork(c, Action.CUSTOM_WORK, UiWork.CustomWork { dao ->
-            dao.candidates().forEach { dao.updateCandidate(it.apply { rejected }) }
-        }).start()*/
+        // UiWork(c, Action.CUSTOM_WORK, UiWork.CustomWork { dao -> }).start()
         // Thread { TfUtils.preTrain(c) }.start()
         // TfUtils.test(c, b.face, b.bytes, Mobina(c).seventh)
         handler?.obtainMessage(Action.WAVE_DOWN.ordinal)?.sendToTarget()
@@ -169,12 +168,21 @@ class Panel : AppCompatActivity(), View.OnTouchListener {
         super.onDestroy()
     }
 
+    @Suppress("DEPRECATION")
     private fun toggle(): Boolean {
         if (Explorer.state.value == Explorer.State.CHANGING) return false
         UiTools.shake(c)
-        startService(Intent(this, Explorer::class.java).apply {
-            if (Explorer.state.value == Explorer.State.ACTIVE) action = Explorer.Code.STOP.s
-        })
+        with(getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler) {
+            if (Explorer.state.value != Explorer.State.ACTIVE) schedule(
+                JobInfo.Builder(Explorer.JOB_ID, ComponentName(this@Panel, Explorer::class.java)).apply {
+                    setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S)
+                        setImportantWhileForeground(true)
+                    else setExpedited(true)
+                    //setPersisted(true)
+                }.build()
+            ) else cancel(Explorer.JOB_ID)
+        }
         return true
     }
 

@@ -71,13 +71,13 @@ class Crawler(private val c: Explorer) : Thread() {
 
     private fun queue() {
         val toBeQueue = when {
-            Panel.onlyPv -> dao.nomineesPv()
+            Explorer.onlyPv -> dao.nomineesPv()
             !Explorer.shouldFollow -> dao.nomineesNf()
             else -> dao.nominees()
-        }
+        }.sortedBy { it.step.toInt() }
         if (toBeQueue.isEmpty()) {
-            if (Panel.onlyPv) {
-                Panel.onlyPv = false
+            if (Explorer.onlyPv) {
+                Explorer.onlyPv = false
                 Panel.handler?.obtainMessage(Panel.Action.NO_REM_PV.ordinal)?.sendToTarget()
                 carryOn()
                 return
@@ -86,9 +86,10 @@ class Crawler(private val c: Explorer) : Thread() {
                 Inspector.search(c, this)
             }
             return; }
-        var preferred = toBeQueue.filter { Inspector.searchScopes(false, it.user, it.name) }
-        if (preferred.isEmpty())
-            preferred = toBeQueue.filter { Inspector.searchScopes(true, it.user, it.name) }
+        val preferred = if (!Explorer.shouldFollow)
+            toBeQueue.filter { Inspector.searchScopes(false, it.user, it.name) }
+        else
+            toBeQueue.filter { Inspector.searchScopes(true, it.user, it.name) }
         queued.addAll(preferred.ifEmpty { toBeQueue })
     }
 
@@ -96,7 +97,7 @@ class Crawler(private val c: Explorer) : Thread() {
         inspection?.close()
         inspection = null
         if (!running) return
-        if (queued.isEmpty()) queue()
+        if (queued.isEmpty() || Explorer.shouldFollow) queue()
         (0 until queued.size).random().apply {
             inspection = Inspector(c, queued[this])
             queued.removeAt(this)
@@ -232,7 +233,7 @@ class Crawler(private val c: Explorer) : Thread() {
         }
 
         const val HUMAN_DELAY = 5000L
-        const val maxTryAgain = 2
+        const val maxTryAgain = 8
         const val IN_PLACE = (0).toByte() // 0
         const val MIN_DISTANCE = (3).toByte() // {1, 2, 3}
         const val MED_DISTANCE = (6).toByte() // {4, 5, 6}

@@ -86,7 +86,7 @@ class Fetcher(
         PROFILE("https://www.instagram.com/%s/?__a=1"),
         POSTS(
             "https://www.instagram.com/graphql/query/?query_hash=$postHash" +
-                    "&variables={\"id\":\"%2\$s\",\"first\":%3\$s,\"after\":\"%4\$s\"}"
+                    "&variables={\"id\":\"%1\$s\",\"first\":%2\$s,\"after\":\"%3\$s\"}"
         ),
     }
 
