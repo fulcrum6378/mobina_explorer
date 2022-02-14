@@ -1,20 +1,20 @@
 package ir.mahdiparastesh.mobinaexplorer.misc
 
-import android.app.Activity
+import android.app.Activity.RESULT_OK
 import android.content.Intent
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
 import ir.mahdiparastesh.mobinaexplorer.R
 import ir.mahdiparastesh.mobinaexplorer.room.Database.DbFile
 import java.io.FileInputStream
 import java.io.FileOutputStream
 
-class Exporter(that: AppCompatActivity) {
+class Exporter(that: ComponentActivity) {
     private var launcher: ActivityResultLauncher<Intent> =
         that.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            if (it.resultCode != Activity.RESULT_OK) return@registerForActivityResult
+            if (it.resultCode != RESULT_OK) return@registerForActivityResult
             // TODO: THIS EXPORT SUCKS, BUT SOMETIMES
             val bExp = try {
                 that.contentResolver.openFileDescriptor(it.data!!.data!!, "w")?.use { des ->

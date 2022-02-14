@@ -14,6 +14,7 @@ import android.os.Message
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.MutableLiveData
+import ir.mahdiparastesh.mobinaexplorer.misc.Controller
 
 @SuppressLint("UnspecifiedImmutableFlag")
 class Explorer : JobService() {
@@ -52,7 +53,7 @@ class Explorer : JobService() {
                     c, 0, Intent(c, Panel::class.java), PendingIntent.FLAG_UPDATE_CURRENT
                 )
             )
-            addAction(0, c.resources.getString(R.string.notif_stop), pi(c, Code.STOP))
+            addAction(0, c.resources.getString(R.string.notif_stop), control(c, Code.STOP))
         }.build())
 
         handler = object : Handler(Looper.myLooper()!!) {
@@ -89,8 +90,8 @@ class Explorer : JobService() {
         var shouldFollow = false
         var onlyPv = false
 
-        fun pi(c: Context, code: Code): PendingIntent = PendingIntent.getService(
-            c, 0, Intent(c, Explorer::class.java).apply { action = code.s },
+        fun control(c: Context, code: Code): PendingIntent = PendingIntent.getBroadcast(
+            c, 0, Intent(c, Controller::class.java).apply { action = code.s },
             PendingIntent.FLAG_CANCEL_CURRENT
         )
     }

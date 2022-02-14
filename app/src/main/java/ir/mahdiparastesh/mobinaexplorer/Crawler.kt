@@ -61,10 +61,15 @@ class Crawler(private val c: Explorer) : Thread() {
             }
         }
         db = Database.DbFile.build(c).also { dao = it.dao() }
-        headers = Gson().fromJson(
+        headers = Gson().fromJson<HashMap<String, String>?>(
             JsonReader(InputStreamReader(c.resources.assets.open("headers.json"))),
             HashMap::class.java
-        )
+        ).apply {
+            this["Referer"] = "https://www.instagram.com/"
+            this["Referrer-Policy"] = "strict-origin-when-cross-origin"
+            this["Access-Control-Allow-Origin"] = "https://www.instagram.com/"
+            this["Access-Control-Allow-Credentials"] = "true"
+        }
         carryOn()
         //inspection = Inspector(c, dao.nominee(""), true)
     }
@@ -233,7 +238,7 @@ class Crawler(private val c: Explorer) : Thread() {
         }
 
         const val HUMAN_DELAY = 5000L
-        const val maxTryAgain = 8
+        const val maxTryAgain = 6
         const val IN_PLACE = (0).toByte() // 0
         const val MIN_DISTANCE = (3).toByte() // {1, 2, 3}
         const val MED_DISTANCE = (6).toByte() // {4, 5, 6}

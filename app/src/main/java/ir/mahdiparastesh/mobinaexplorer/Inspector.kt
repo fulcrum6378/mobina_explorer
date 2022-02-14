@@ -12,7 +12,6 @@ import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.keywords
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.proximity
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Signal
 import ir.mahdiparastesh.mobinaexplorer.Fetcher.Type
-import ir.mahdiparastesh.mobinaexplorer.json.Follow
 import ir.mahdiparastesh.mobinaexplorer.json.GraphQL.*
 import ir.mahdiparastesh.mobinaexplorer.json.Rest
 import ir.mahdiparastesh.mobinaexplorer.json.Search
@@ -242,7 +241,12 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             nom.user, list.size.toString()
         )
         Fetcher(c, type.url.format(nom.id.toString(), next_max_id), Fetcher.Listener { flw ->
-            val json = Gson().fromJson(Fetcher.decode(flw), Follow::class.java)
+            val json = try {
+                Gson().fromJson(Fetcher.decode(flw), Rest.Follow::class.java)
+            } catch (e: Exception) {
+                //allFollow(type, list, friends, next_max_id)
+                throw Exception(Fetcher.decode(flw))
+            }
             Fetcher(
                 c, Type.FRIENDSHIPS.url, Fetcher.Listener { friendship ->
                     if (!c.crawler.running) return@Listener

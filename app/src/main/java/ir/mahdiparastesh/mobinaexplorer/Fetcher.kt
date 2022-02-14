@@ -49,7 +49,18 @@ class Fetcher(
         Volley.newRequestQueue(c).add(this)
     }
 
-    override fun getHeaders(): HashMap<String, String> = c.crawler.headers
+    @Suppress("SpellCheckingInspection")
+    override fun getHeaders(): HashMap<String, String> = c.crawler.headers.apply {
+        if (method == Method.POST) {
+            this["content-type"] = "application/x-www-form-urlencoded"
+            this["sec-fetch-site"] = "same-origin"
+            this["x-requested-with"] = "XMLHttpRequest"
+            if (this["cookie"]!!.contains("csrftoken="))
+                this["x-csrftoken"] = this["cookie"]!!
+                    .substringAfter("csrftoken=")
+                    .substringBefore(";")
+        } else this["sec-fetch-site"] = "same-site"
+    }
 
     override fun getBody(): ByteArray = encode(body)?.encodeToByteArray() ?: super.getBody()
 

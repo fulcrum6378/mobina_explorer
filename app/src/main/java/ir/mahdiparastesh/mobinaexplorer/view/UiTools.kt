@@ -14,7 +14,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.DisplayMetrics
 import android.view.View
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.ComponentActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import ir.mahdiparastesh.mobinaexplorer.Fetcher
@@ -105,7 +105,7 @@ class UiTools {
             }
         }
 
-        fun openProfile(c: AppCompatActivity, user: String) {
+        fun openProfile(c: ComponentActivity, user: String) {
             c.startActivity(
                 Intent(Intent.ACTION_VIEW, Uri.parse(Fetcher.Type.PROFILE.url.format(user)))
             )

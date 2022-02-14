@@ -14,8 +14,8 @@ import android.view.MotionEvent
 import android.view.View
 import android.widget.PopupMenu
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import ir.mahdiparastesh.mobinaexplorer.databinding.MainBinding
 import ir.mahdiparastesh.mobinaexplorer.misc.Exporter
@@ -32,7 +32,7 @@ import ir.mahdiparastesh.mobinaexplorer.view.UiWork
 // adb connect 192.168.1.20:
 
 @SuppressLint("ClickableViewAccessibility", "NotifyDataSetChanged")
-class Panel : AppCompatActivity(), View.OnTouchListener {
+class Panel : ComponentActivity(), View.OnTouchListener {
     private lateinit var c: Context
     private lateinit var b: MainBinding
     private lateinit var exporter: Exporter

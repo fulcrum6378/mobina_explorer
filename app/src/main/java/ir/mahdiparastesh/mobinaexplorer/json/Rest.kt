@@ -19,6 +19,14 @@ open class Rest(val status: String) {
         //val should_show_category: Boolean
     )
 
+    class Follow( // Both following and followers
+        val next_max_id: String? = null,
+        val users: Array<User>,
+        //val big_list: Boolean,
+        //val page_size: Double,
+        status: String
+    ) : Rest(status)
+
     open class GraphQLResponse(val data: GraphQL, status: String) : Rest(status)
 
     class Friendships(val friendship_statuses: HashMap<String, Friendship>, status: String) :

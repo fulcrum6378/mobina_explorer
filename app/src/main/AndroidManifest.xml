@@ -37,5 +37,7 @@
             android:name=".Explorer"
             android:exported="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <receiver android:name=".misc.Controller" />
     </application>
 </manifest>
