@@ -57,6 +57,7 @@ class Crawler(private val c: Explorer) : Thread() {
                         Delayer(handling.looper) { carryOn() }
                     }
                     HANDLE_REQ_REPAIR -> repair(msg.obj as Nominee)
+                    HANDLE_SIGNED_OUT -> signal(Signal.SIGNED_OUT)
                 }
             }
         }
@@ -136,12 +137,14 @@ class Crawler(private val c: Explorer) : Thread() {
     }
 
     fun repair(nom: Nominee) {
-        Fetcher(c, Fetcher.Type.POSTS.url.format(nom.id, 1, ""), Fetcher.Listener { graphQl ->
+        Fetcher(c, Fetcher.Type.INFO.url.format(nom.id), Fetcher.Listener { info ->
             try {
-                val newUn = Gson().fromJson(
-                    Fetcher.decode(graphQl), Rest.GraphQLResponse::class.java
-                ).data.user!!.edge_owner_to_timeline_media!!.edges[0].node.owner.username
-                dao.updateNominee(nom.apply { user = newUn })
+                val newU = Gson().fromJson(Fetcher.decode(info), Rest.ProfileInfo::class.java).user
+                dao.updateNominee(nom.apply {
+                    user = newU.username
+                    name = newU.full_name
+                    accs = !newU.is_private || newU.friendship_status.following
+                })
             } catch (ignored: Exception) {
                 //dao.deleteNominee(nom.id)
                 //dao.deleteCandidate(nom.id)
@@ -195,6 +198,7 @@ class Crawler(private val c: Explorer) : Thread() {
         const val HANDLE_STOP = 4
         const val HANDLE_NOT_FOUND = 5
         const val HANDLE_REQ_REPAIR = 6
+        const val HANDLE_SIGNED_OUT = 7
 
         fun newCandidate(can: Candidate, dao: Database.DAO): Boolean = try {
             dao.addCandidate(can)
@@ -237,12 +241,13 @@ class Crawler(private val c: Explorer) : Thread() {
             else -> 0
         }
 
-        const val HUMAN_DELAY = 5000L
         const val maxTryAgain = 6
         const val IN_PLACE = (0).toByte() // 0
         const val MIN_DISTANCE = (3).toByte() // {1, 2, 3}
         const val MED_DISTANCE = (6).toByte() // {4, 5, 6}
         const val MAX_DISTANCE = (9).toByte() // {7, 8, 9}
+
+        fun humanDelay() = if (Explorer.shouldFollow) 6000L else 3000L
 
         // 10+ step followers/following won't be fetched
         val proximity = arrayOf(

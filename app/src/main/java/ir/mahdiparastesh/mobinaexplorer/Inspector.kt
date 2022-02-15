@@ -12,9 +12,9 @@ import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.keywords
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.proximity
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Signal
 import ir.mahdiparastesh.mobinaexplorer.Fetcher.Type
-import ir.mahdiparastesh.mobinaexplorer.json.GraphQL.*
+import ir.mahdiparastesh.mobinaexplorer.json.GraphQL.EdgePost
+import ir.mahdiparastesh.mobinaexplorer.json.GraphQL.Media
 import ir.mahdiparastesh.mobinaexplorer.json.Rest
-import ir.mahdiparastesh.mobinaexplorer.json.Search
 import ir.mahdiparastesh.mobinaexplorer.misc.Delayer
 import ir.mahdiparastesh.mobinaexplorer.room.Candidate
 import ir.mahdiparastesh.mobinaexplorer.room.Database
@@ -23,7 +23,7 @@ import ir.mahdiparastesh.mobinaexplorer.room.Nominee
 class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean = false) {
     private var db: Database
     private lateinit var dao: Database.DAO
-    private lateinit var u: User
+    private lateinit var u: Rest.User
     private lateinit var timeline: Media
     private val allPosts = arrayListOf<EdgePost>()
     private val l = c.crawler.handling.looper
@@ -91,21 +91,19 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             shallFetch = false
         }
 
-        if (shallFetch) Fetcher(c, Type.PROFILE.url.format(nom.user), Fetcher.Listener { baPro ->
+        if (shallFetch) Fetcher(c, Type.INFO.url.format(nom.id), Fetcher.Listener { baPro ->
             if (!c.crawler.running) return@Listener
             val profile = Fetcher.decode(baPro)
 
             try {
-                u = Gson().fromJson(profile, Profile::class.java).graphql.user!!
-                if (nom.accs && (u.is_private == true || u.blocked_by_viewer == true
-                            || u.has_blocked_viewer == true)
-                ) dao.updateNominee(nom.apply { accs = false })
+                u = Gson().fromJson(profile, Rest.ProfileInfo::class.java).user
+                if (nom.accs && u.is_private && !u.friendship_status.following)
+                    dao.updateNominee(nom.apply { accs = false })
                 unknownError = 0
             } catch (e: Exception) { // JsonSyntaxException or NullPointerException
                 invalidResult()
                 return@Listener
             }
-            timeline = u.edge_owner_to_timeline_media!!
 
             if (nom.name != u.full_name) {
                 nom.name = u.full_name
@@ -123,18 +121,15 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             }
 
             if (!c.crawler.running) return@Listener
-            val lookAt = u.profile_pic_url_hd ?: u.profile_pic_url
-            if (lookAt != null) {
-                c.crawler.signal(Signal.PROFILE_PHOTO, nom.user)
-                Fetcher(c, lookAt, Fetcher.Listener { img ->
-                    if (c.crawler.running) c.analyzer.Subject(img) { res ->
-                        if (!res.isNullOrEmpty() && res.anyQualified()) {
-                            qualified = Qualification(res, Candidate.IN_PROFILE)
-                            handler.obtainMessage(handler.ANALYZED).sendToTarget()
-                        } else fetchPosts(timeline.edges)
-                    }
-                })
-            } else fetchPosts(timeline.edges)
+            c.crawler.signal(Signal.PROFILE_PHOTO, nom.user)
+            Fetcher(c, u.profile_pic_url, Fetcher.Listener { img ->
+                if (c.crawler.running) c.analyzer.Subject(img) { res ->
+                    if (!res.isNullOrEmpty() && res.anyQualified()) {
+                        qualified = Qualification(res, Candidate.IN_PROFILE)
+                        handler.obtainMessage(handler.ANALYZED).sendToTarget()
+                    } else fetchPosts(null)
+                }
+            })
         })
     }
 
@@ -146,6 +141,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         } else c.crawler.signal(Signal.UNKNOWN_ERROR)
     }
 
+    @Suppress("SameParameterValue")
     private fun fetchPosts(initial: Array<EdgePost>?) {
         if (!c.crawler.running) return
         if (!nom.accs) {
@@ -167,10 +163,9 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                 Type.POSTS.url.format(nom.id, allPosts.size, timeline.page_info.end_cursor),
                 Fetcher.Listener { graphQl ->
                     try {
-                        u = Gson().fromJson(
+                        timeline = Gson().fromJson(
                             Fetcher.decode(graphQl), Rest.GraphQLResponse::class.java
-                        ).data.user!!
-                        timeline = u.edge_owner_to_timeline_media!!
+                        ).data.user!!.edge_owner_to_timeline_media!!
                         allPosts.addAll(timeline.edges)
                         analPost()
                     } catch (e: Exception) { // JsonSyntaxException or NullPointerException
@@ -241,12 +236,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             nom.user, list.size.toString()
         )
         Fetcher(c, type.url.format(nom.id.toString(), next_max_id), Fetcher.Listener { flw ->
-            val json = try {
-                Gson().fromJson(Fetcher.decode(flw), Rest.Follow::class.java)
-            } catch (e: Exception) {
-                //allFollow(type, list, friends, next_max_id)
-                throw Exception(Fetcher.decode(flw))
-            }
+            val json = Gson().fromJson(Fetcher.decode(flw), Rest.Follow::class.java)
             Fetcher(
                 c, Type.FRIENDSHIPS.url, Fetcher.Listener { friendship ->
                     if (!c.crawler.running) return@Listener
@@ -311,9 +301,9 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         fun search(c: Explorer, word: String) = Fetcher(c, Type.SEARCH.url.format(word),
             Fetcher.Listener { search ->
                 if (!c.crawler.running) return@Listener
-                val users = Gson().fromJson(Fetcher.decode(search), Search::class.java)
+                val users = Gson().fromJson(Fetcher.decode(search), Rest.Search::class.java)
                     .users.toMutableList()
-                    .also { it.sortWith(Search.ItemUser.Sort()) }
+                    .also { it.sortWith(Rest.Search.ItemUser.Sort()) }
                 Fetcher(
                     c, Type.FRIENDSHIPS.url, Fetcher.Listener { friendship ->
                         if (!c.crawler.running) return@Listener

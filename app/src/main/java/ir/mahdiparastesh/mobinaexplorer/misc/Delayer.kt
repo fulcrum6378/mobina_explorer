@@ -5,15 +5,18 @@ import android.os.Looper
 import android.os.Message
 import android.os.SystemClock
 
-open class Delayer(private val looper: Looper, private val listener: () -> Unit) {
-
-    private var mStopTimeInFuture = SystemClock.elapsedRealtime() + TIMEOUT
+open class Delayer(
+    private val looper: Looper,
+    private val timeout: Long = ir.mahdiparastesh.mobinaexplorer.Crawler.humanDelay(),
+    private val listener: () -> Unit
+) {
+    private var mStopTimeInFuture = SystemClock.elapsedRealtime() + timeout
     private val mHandler = object : Handler(looper) {
         override fun handleMessage(msg: Message) {
             synchronized(this@Delayer) {
                 if (mStopTimeInFuture - SystemClock.elapsedRealtime() <= 0)
                     listener()
-                else sendMessageDelayed(obtainMessage(MSG), TIMEOUT)
+                else sendMessageDelayed(obtainMessage(MSG), timeout)
             }
         }
     }
@@ -24,6 +27,5 @@ open class Delayer(private val looper: Looper, private val listener: () -> Unit)
 
     companion object {
         private const val MSG = 1
-        var TIMEOUT = ir.mahdiparastesh.mobinaexplorer.Crawler.HUMAN_DELAY
     }
 }

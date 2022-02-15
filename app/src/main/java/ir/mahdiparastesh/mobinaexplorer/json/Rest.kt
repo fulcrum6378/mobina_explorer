@@ -1,22 +1,68 @@
 package ir.mahdiparastesh.mobinaexplorer.json
 
+@Suppress("SpellCheckingInspection")
 open class Rest(val status: String) {
 
     class User(
-        val pk: String,
-        val username: String,
+        //val account_badges: Array<Map<String, *>>,
+        //val account_type: Float?,
+        //val auto_expand_chaining: Boolean?,
+        val biography: String?,
+        //val can_be_reported_as_fraud: Boolean?,
+        //val creator_shopping_info: Map<String, *>?,
+        //val external_url: String?,
+        //val fbid_v2: Double,
+        //val follow_friction_type: Float?,
+        //val follower_count: Float?,
+        //val following_count: Float?,
+        //val following_tag_count: Float?,
+        val friendship_status: Friendship,
         val full_name: String,
-        val is_private: Boolean,
-        val profile_pic_url: String,
-        val profile_pic_id: String,
-        //val is_verified: Boolean,
-        //val follow_friction_type: Float,
         //val has_anonymous_profile_picture: Boolean,
+        //val has_guides: Boolean?,
         //val has_highlight_reels: Boolean,
-        //val account_badges: Array<HashMap<String, *>>,
-        val friendship_status: HashMap<String, *>,
-        //val latest_reel_media: Float,
-        //val should_show_category: Boolean
+        //val has_unseen_besties_media: Boolean?,
+        //val has_videos: Boolean?,
+        //val hd_profile_pic_versions: Array<Candidate>?,
+        //val hd_profile_pic_url_info: Candidate?,
+        //val highlight_reshare_disabled: Boolean?,
+        //val include_direct_blacklist_status: Boolean?,
+        //val interop_messaging_user_fbid: String?,
+        //val is_bestie: Boolean?,
+        //val is_business: Boolean?,
+        //val is_call_to_action_enabled: Boolean?, // actually nullable
+        //val is_favorite: Boolean?,
+        //val is_interest_account: Boolean?,
+        //val is_memorialized: Boolean?,
+        //val is_potential_business: Boolean?,
+        val is_private: Boolean,
+        //val is_using_unified_inbox_for_direct: Boolean?,
+        //val is_verified: Boolean,
+        //val latest_reel_media: Double,
+        //val media_count: Float?,
+        //val mutual_followers_count: Float?,
+        //val open_external_url_with_in_app_browser: Boolean?,
+        val pk: String,
+        //val primary_profile_link_type: Float?,
+        //val professional_conversion_suggested_account_type: Float?,
+        //val profile_context: String?,
+        //val profile_context_facepile_users: Array<Any>?,
+        //val profile_context_links_with_user_ids: Array<Any>?,
+        val profile_pic_url: String,
+        //val profile_pic_id: String,
+        //val pronouns: Array<Any>?,
+        //val reel_auto_archive: String?,
+        //val request_contact_enabled: Boolean?,
+        //val should_show_category: Boolean,
+        //val show_account_transparency_details: Boolean?,
+        //val show_fb_link_on_profile: Boolean?,
+        //val show_post_insights_entry_point: Boolean?,
+        //val total_ar_effects: Float?,
+        //val total_igtv_videos: Float?,
+        val username: String,
+        //val usertags_count: Float?,
+        //val wa_addressable: Any?,// Double or Boolean
+        //val wa_eligibility: Double?
     )
 
     class Follow( // Both following and followers
@@ -41,4 +87,25 @@ open class Rest(val status: String) {
         //val outgoing_request: Boolean,
         //val is_feed_favorite: Boolean,
     )
+
+    class Search(
+        //val places: Array<HashMap<String, *>>,
+        //val hashtags: Array<HashMap<String, *>>,
+        //val rank_token: String,
+        //val has_more: Boolean,
+        val users: Array<ItemUser>,
+        status: String
+    ) : Rest(status) {
+
+        class ItemUser(val position: Float, val user: User) {
+            class Sort : Comparator<ItemUser> {
+                override fun compare(a: ItemUser, b: ItemUser) =
+                    a.position.toInt() - b.position.toInt()
+            }
+        }
+    }
+
+    class ProfileInfo(val user: User, status: String) : Rest(status)
+
+    open class Candidate(val width: Float, val height: Float, val url: String)
 }

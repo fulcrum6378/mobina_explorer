@@ -36,7 +36,8 @@
         <service
             android:name=".Explorer"
             android:exported="true"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:stopWithTask="false" />
 
         <receiver android:name=".misc.Controller" />
     </application>

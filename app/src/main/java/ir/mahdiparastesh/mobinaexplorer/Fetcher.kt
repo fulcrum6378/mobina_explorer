@@ -27,11 +27,7 @@ class Fetcher(
             Crawler.handler?.obtainMessage(Crawler.HANDLE_NOT_FOUND)?.sendToTarget()
             return@ErrorListener
         }
-        403 -> {
-            //throw Exception(String(it.networkResponse.data))
-            //return@ErrorListener
-        }
-    } // TODO: "Log in • Instagram"
+    }
 
     if (doesErrorPersist < Crawler.maxTryAgain) {
         c.crawler.signal(Crawler.Signal.VOLLEY_ERROR, code.toString())
@@ -71,9 +67,16 @@ class Fetcher(
 
     class Listener(private val listener: OnFinished) : Response.Listener<ByteArray> {
         override fun onResponse(response: ByteArray) {
-            doesErrorPersist = 0
-            Panel.handler?.obtainMessage(Panel.Action.WAVE_DOWN.ordinal)?.sendToTarget()
-            Transit(listener, response)
+            try {
+                val res = decode(response)
+                if (!res.contains("Log in • Instagram") || !res.startsWith("<!DOCTYPE html>"))
+                    throw Exception("NORMAL")
+                Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
+            } catch (ignored: Exception) {
+                doesErrorPersist = 0
+                Panel.handler?.obtainMessage(Panel.Action.WAVE_DOWN.ordinal)?.sendToTarget()
+                Transit(listener, response)
+            }
         }
 
         fun interface OnFinished {
@@ -99,6 +102,8 @@ class Fetcher(
             "https://www.instagram.com/graphql/query/?query_hash=$postHash" +
                     "&variables={\"id\":\"%1\$s\",\"first\":%2\$s,\"after\":\"%3\$s\"}"
         ),
+        INFO("https://i.instagram.com/api/v1/users/%s/info/"),
+        // Browser hover feature, takes ID, gets ~1% of what PROFILE gets
     }
 
     companion object {
