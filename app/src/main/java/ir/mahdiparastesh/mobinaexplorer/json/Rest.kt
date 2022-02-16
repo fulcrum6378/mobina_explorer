@@ -75,7 +75,7 @@ open class Rest(val status: String) {
 
     open class GraphQLResponse(val data: GraphQL, status: String) : Rest(status)
 
-    class Friendships(val friendship_statuses: HashMap<String, Friendship>, status: String) :
+    class Friendships(val friendship_statuses: Map<String, Friendship>, status: String) :
         Rest(status)
 
     class Friendship(
@@ -89,8 +89,8 @@ open class Rest(val status: String) {
     )
 
     class Search(
-        //val places: Array<HashMap<String, *>>,
-        //val hashtags: Array<HashMap<String, *>>,
+        //val places: Array<Map<String, *>>,
+        //val hashtags: Array<Map<String, *>>,
         //val rank_token: String,
         //val has_more: Boolean,
         val users: Array<ItemUser>,

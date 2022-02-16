@@ -50,7 +50,7 @@ class Crawler(private val c: Explorer) : Thread() {
                     HANDLE_ML_KIT -> (msg.obj as Analyzer.Transit)
                         .apply { listener.onFinished(results) }
                     HANDLE_ERROR -> Delayer(handling.looper) { carryOn() }
-                    HANDLE_STOP -> c.stopSelf()
+                    HANDLE_STOP -> Explorer.control(c.c, Explorer.Code.STOP).send()
                     HANDLE_NOT_FOUND -> if (inspection != null) {
                         dao.deleteNominee(inspection!!.nom.id)
                         dao.deleteCandidate(inspection!!.nom.id)
@@ -177,6 +177,7 @@ class Crawler(private val c: Explorer) : Thread() {
         INVALID_RESULT("Invalid result! Trying again..."),
         SIGNED_OUT("You're signed out :("),
         UNKNOWN_ERROR("Unknown error!!!"),
+        STRICT_ANALYSE("Beginning a stricter analyse on \"%s\"..."),
         PROFILE_PHOTO("Analyzing %s's profile photo..."),
         START_POSTS("Found nothing :( Inspecting %s's posts..."),
         RESUME_POSTS("Fetching more posts from %1\$s (currently %2\$s)..."),

@@ -18,7 +18,7 @@ import ir.mahdiparastesh.mobinaexplorer.misc.Controller
 
 @SuppressLint("UnspecifiedImmutableFlag")
 class Explorer : JobService() {
-    private lateinit var c: Context
+    lateinit var c: Context
     private var wakeLock: PowerManager.WakeLock? = null
     lateinit var analyzer: Analyzer
     lateinit var crawler: Crawler
@@ -69,7 +69,7 @@ class Explorer : JobService() {
         return true
     }
 
-    override fun onStopJob(parameters: JobParameters): Boolean {
+    override fun onStopJob(parameters: JobParameters): Boolean { // {"callback":{},"jobId":103}
         state.value = State.CHANGING
         wakeLock?.let { if (it.isHeld) it.release() }
         stopForeground(true)

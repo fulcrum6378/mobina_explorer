@@ -12,6 +12,7 @@ import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.keywords
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.proximity
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Signal
 import ir.mahdiparastesh.mobinaexplorer.Fetcher.Type
+import ir.mahdiparastesh.mobinaexplorer.json.GraphQL
 import ir.mahdiparastesh.mobinaexplorer.json.GraphQL.EdgePost
 import ir.mahdiparastesh.mobinaexplorer.json.GraphQL.Media
 import ir.mahdiparastesh.mobinaexplorer.json.Rest
@@ -46,25 +47,16 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                     val doNotWait = msg.obj == false
                     if (nom.accs && nom.proximity() != null && !nom.fllw) {
                         if (Explorer.shouldFollow) {
-                            if (!newlyQualified)
-                                c.crawler.signal(Signal.FOLLOWERS_W, nom.user, "0")
-                            Delayer(l) { allFollow(Type.FOLLOWERS, mutableListOf(), hashMapOf()) }
+                            if (!newlyQualified) c.crawler.signal(Signal.FOLLOWERS_W, nom.user, "0")
+                            Delayer(l) { allFollow(Type.FOLLOWERS) }
                         } else bye(done = false, signal = !newlyQualified, wait = !doNotWait)
                     } else bye(signal = !newlyQualified, wait = !doNotWait)
                 }
                 FOLLOWERS -> {
-                    val res = msg.obj as List<Any>
-                    addFollow(res[0] as List<Rest.User>, res[1] as HashMap<String, Rest.Friendship>)
                     c.crawler.signal(Signal.FOLLOWING_W, nom.user, "0")
-                    Delayer(l) {
-                        allFollow(Type.FOLLOWING, mutableListOf(), hashMapOf())
-                    }
+                    Delayer(l) { allFollow(Type.FOLLOWING) }
                 }
-                FOLLOWING -> {
-                    val res = msg.obj as List<Any>
-                    addFollow(res[0] as List<Rest.User>, res[1] as HashMap<String, Rest.Friendship>)
-                    bye()
-                }
+                FOLLOWING -> bye()
             }
         }
 
@@ -93,10 +85,8 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
 
         if (shallFetch) Fetcher(c, Type.INFO.url.format(nom.id), Fetcher.Listener { baPro ->
             if (!c.crawler.running) return@Listener
-            val profile = Fetcher.decode(baPro)
-
             try {
-                u = Gson().fromJson(profile, Rest.ProfileInfo::class.java).user
+                u = Gson().fromJson(Fetcher.decode(baPro), Rest.ProfileInfo::class.java).user
                 if (nom.accs && u.is_private && !u.friendship_status.following)
                     dao.updateNominee(nom.apply { accs = false })
                 unknownError = 0
@@ -119,17 +109,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                 handler.obtainMessage(handler.ANALYZED).sendToTarget()
                 return@Listener
             }
-
-            if (!c.crawler.running) return@Listener
-            c.crawler.signal(Signal.PROFILE_PHOTO, nom.user)
-            Fetcher(c, u.profile_pic_url, Fetcher.Listener { img ->
-                if (c.crawler.running) c.analyzer.Subject(img) { res ->
-                    if (!res.isNullOrEmpty() && res.anyQualified()) {
-                        qualified = Qualification(res, Candidate.IN_PROFILE)
-                        handler.obtainMessage(handler.ANALYZED).sendToTarget()
-                    } else fetchPosts(null)
-                }
-            })
+            Delayer(l) { strictAnalyse() }
         })
     }
 
@@ -141,16 +121,41 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         } else c.crawler.signal(Signal.UNKNOWN_ERROR)
     }
 
+    private fun strictAnalyse() {
+        if (!c.crawler.running) return
+        c.crawler.signal(Signal.STRICT_ANALYSE, u.username)
+        Fetcher(c, Type.PROFILE.url.format(u.username), Fetcher.Listener { profile ->
+            try {
+                timeline = Gson().fromJson(Fetcher.decode(profile), GraphQL.Profile::class.java)
+                    .graphql.user?.edge_owner_to_timeline_media!!
+                unknownError = 0
+            } catch (e: Exception) { // JsonSyntaxException or NullPointerException
+                invalidResult()
+                return@Listener
+            }
+
+            c.crawler.signal(Signal.PROFILE_PHOTO, nom.user)
+            Fetcher(c, u.profile_pic_url, Fetcher.Listener { img ->
+                if (c.crawler.running) c.analyzer.Subject(img) { res ->
+                    if (!res.isNullOrEmpty() && res.anyQualified()) {
+                        qualified = Qualification(res, Candidate.IN_PROFILE)
+                        handler.obtainMessage(handler.ANALYZED).sendToTarget()
+                    } else fetchPosts(timeline.edges)
+                }
+            })
+        })
+    }
+
     @Suppress("SameParameterValue")
     private fun fetchPosts(initial: Array<EdgePost>?) {
-        if (!c.crawler.running) return
+        if (!c.crawler.running || !::timeline.isInitialized) return
         if (!nom.accs) {
             handler.obtainMessage(handler.ANALYZED).sendToTarget()
             return
         }
         if (initial != null) {
             c.crawler.signal(Signal.START_POSTS, nom.user)
-            allPosts.addAll(timeline.edges)
+            allPosts.addAll(initial)
             analPost()
             return
         } else if (!timeline.page_info.has_next_page || analyzedPosts >= nom.maxPosts()) {
@@ -224,37 +229,33 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
     }
 
     @Suppress("LABEL_NAME_CLASH")
-    private fun allFollow(
-        type: Type,
-        list: MutableList<Rest.User>,
-        friends: HashMap<String, Rest.Friendship>,
-        next_max_id: String = ""
-    ) {
+    private fun allFollow(type: Type, next_max_id: String = "") {
         if (!c.crawler.running) return
+        if (next_max_id == "") numFollow = 0
         c.crawler.signal(
             if (type == Type.FOLLOWERS) Signal.FOLLOWERS else Signal.FOLLOWING,
-            nom.user, list.size.toString()
+            nom.user, numFollow.toString()
         )
         Fetcher(c, type.url.format(nom.id.toString(), next_max_id), Fetcher.Listener { flw ->
             val json = Gson().fromJson(Fetcher.decode(flw), Rest.Follow::class.java)
             Fetcher(
                 c, Type.FRIENDSHIPS.url, Fetcher.Listener { friendship ->
                     if (!c.crawler.running) return@Listener
-                    friends.putAll(
+                    addFollow(
+                        json.users.toMutableList().also { numFollow += it.size },
                         Gson().fromJson(
                             Fetcher.decode(friendship), Rest.Friendships::class.java
                         ).friendship_statuses
                     )
 
-                    list.addAll(json.users.toMutableList())
-                    if (json.next_max_id == null || list.size >= nom.maxFollow())
-                        handler.obtainMessage(type.ordinal, listOf(list, friends)).sendToTarget()
+                    if (json.next_max_id == null || numFollow >= nom.maxFollow())
+                        handler.obtainMessage(type.ordinal).sendToTarget()
                     else {
                         c.crawler.signal(
                             if (type == Type.FOLLOWERS) Signal.FOLLOWERS_W else Signal.FOLLOWING_W,
-                            nom.user, list.size.toString()
+                            nom.user, numFollow.toString()
                         )
-                        Delayer(l) { allFollow(type, list, friends, json.next_max_id) }
+                        Delayer(l) { allFollow(type, json.next_max_id) }
                     }
                 }, true, Request.Method.POST,
                 preFriend + json.users.joinToString(sepFriendId) { it.pk }
@@ -262,7 +263,8 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         })
     }
 
-    private fun addFollow(list: List<Rest.User>, fs: HashMap<String, Rest.Friendship>) {
+    private var numFollow = 0
+    private fun addFollow(list: List<Rest.User>, fs: Map<String, Rest.Friendship>) {
         when (nom.proximity()) {
             IN_PLACE, MIN_DISTANCE -> list
             MED_DISTANCE, MAX_DISTANCE ->
