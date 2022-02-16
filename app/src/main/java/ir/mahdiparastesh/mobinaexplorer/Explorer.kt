@@ -4,28 +4,32 @@ import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
-import android.app.job.JobParameters
-import android.app.job.JobService
+import android.app.Service
 import android.content.Context
 import android.content.Intent
-import android.os.Handler
-import android.os.Looper
-import android.os.Message
-import android.os.PowerManager
+import android.os.*
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.MutableLiveData
-import ir.mahdiparastesh.mobinaexplorer.misc.Controller
 
 @SuppressLint("UnspecifiedImmutableFlag")
-class Explorer : JobService() {
+class Explorer : Service() {
     lateinit var c: Context
     private var wakeLock: PowerManager.WakeLock? = null
     lateinit var analyzer: Analyzer
     lateinit var crawler: Crawler
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
+        if (intent?.action != null && state.value != State.CHANGING) when (intent.action) {
+            Code.STOP.s -> if (state.value == State.ACTIVE) destroy()
+        }
+        return START_NOT_STICKY
+    }
+
     @SuppressLint("WakelockTimeout")
-    override fun onStartJob(params: JobParameters): Boolean {
+    override fun onCreate() {
         state.value = State.CHANGING
+        super.onCreate()
         c = applicationContext
 
         // In order for the service to be able to persist in when the activities are destroyed:
@@ -53,7 +57,7 @@ class Explorer : JobService() {
                     c, 0, Intent(c, Panel::class.java), PendingIntent.FLAG_UPDATE_CURRENT
                 )
             )
-            addAction(0, c.resources.getString(R.string.notif_stop), control(c, Code.STOP))
+            addAction(0, c.resources.getString(R.string.notif_stop), pi(c, Code.STOP))
         }.build())
 
         handler = object : Handler(Looper.myLooper()!!) {
@@ -63,24 +67,29 @@ class Explorer : JobService() {
                 }
             }
         }
+
         analyzer = Analyzer(c)
         crawler = Crawler(this).also { it.start() }
         state.value = State.ACTIVE
-        return true
     }
 
-    override fun onStopJob(parameters: JobParameters): Boolean { // {"callback":{},"jobId":103}
+    fun destroy() {
+        stopForeground(true)
+        stopSelf()
+    }
+
+    override fun onDestroy() {
         state.value = State.CHANGING
         wakeLock?.let { if (it.isHeld) it.release() }
-        stopForeground(true)
         crawler.interrupt()
+        super.onDestroy()
         System.gc()
         state.value = State.OFF
-        return false
     }
 
+    override fun onBind(intent: Intent): IBinder? = null
+
     companion object {
-        const val JOB_ID = 103
         const val CH_ID = 103
         const val HANDLE_STATUS = 0
         lateinit var handler: Handler
@@ -90,8 +99,8 @@ class Explorer : JobService() {
         var shouldFollow = false
         var onlyPv = false
 
-        fun control(c: Context, code: Code): PendingIntent = PendingIntent.getBroadcast(
-            c, 0, Intent(c, Controller::class.java).apply { action = code.s },
+        fun pi(c: Context, code: Code): PendingIntent = PendingIntent.getService(
+            c, 0, Intent(c, Explorer::class.java).apply { action = code.s },
             PendingIntent.FLAG_CANCEL_CURRENT
         )
     }

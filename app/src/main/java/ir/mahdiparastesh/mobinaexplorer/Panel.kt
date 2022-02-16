@@ -4,10 +4,8 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
-import android.app.job.JobInfo
-import android.app.job.JobScheduler
-import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.os.*
 import android.view.ContextThemeWrapper
 import android.view.MotionEvent
@@ -168,20 +166,12 @@ class Panel : ComponentActivity(), View.OnTouchListener {
         super.onDestroy()
     }
 
-    @Suppress("DEPRECATION")
     private fun toggle(): Boolean {
         if (Explorer.state.value == Explorer.State.CHANGING) return false
         UiTools.shake(c)
-        with(getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler) {
-            if (Explorer.state.value != Explorer.State.ACTIVE) schedule(
-                JobInfo.Builder(Explorer.JOB_ID, ComponentName(this@Panel, Explorer::class.java)).apply {
-                    setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
-                    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S)
-                        setImportantWhileForeground(true)
-                    else setExpedited(true)
-                }.build()
-            ) else cancel(Explorer.JOB_ID)
-        }
+        startService(Intent(this, Explorer::class.java).apply {
+            if (Explorer.state.value == Explorer.State.ACTIVE) action = Explorer.Code.STOP.s
+        })
         return true
     }
 

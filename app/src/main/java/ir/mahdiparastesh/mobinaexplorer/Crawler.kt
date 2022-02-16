@@ -50,7 +50,7 @@ class Crawler(private val c: Explorer) : Thread() {
                     HANDLE_ML_KIT -> (msg.obj as Analyzer.Transit)
                         .apply { listener.onFinished(results) }
                     HANDLE_ERROR -> Delayer(handling.looper) { carryOn() }
-                    HANDLE_STOP -> Explorer.control(c.c, Explorer.Code.STOP).send()
+                    HANDLE_STOP -> c.destroy()
                     HANDLE_NOT_FOUND -> if (inspection != null) {
                         dao.deleteNominee(inspection!!.nom.id)
                         dao.deleteCandidate(inspection!!.nom.id)
