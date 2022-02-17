@@ -1,6 +1,8 @@
 package ir.mahdiparastesh.mobinaexplorer
 
+import android.content.Context
 import android.net.Uri
+import android.os.Handler
 import android.text.TextUtils
 import com.android.volley.DefaultRetryPolicy
 import com.android.volley.NetworkResponse
@@ -11,28 +13,30 @@ import com.android.volley.toolbox.Volley
 import java.util.regex.Pattern
 
 class Fetcher(
-    private val c: Explorer,
+    private val c: Context,
     url: String,
-    private val listener: Listener,
+    private val onSuccess: Listener,
     cache: Boolean = false,
     method: Int = Method.GET,
-    private val body: String? = null
-) : Request<ByteArray>(method, encode(url), Response.ErrorListener {
+    private val body: String? = null,
+    private val crawler: Crawler? = if (c is Explorer) c.crawler else null,
+    onError: Response.ErrorListener? = null,
+) : Request<ByteArray>(method, encode(url), onError ?: Response.ErrorListener {
     Panel.handler?.obtainMessage(Panel.Action.WAVE_DOWN.ordinal)?.sendToTarget()
-    val code = it.networkResponse.statusCode
+    val code = it.networkResponse?.statusCode
 
     when (code) {
         404 -> {
-            c.crawler.signal(Crawler.Signal.PAGE_NOT_FOUND, code.toString())
+            crawler?.signal(Crawler.Signal.PAGE_NOT_FOUND, code.toString())
             Crawler.handler?.obtainMessage(Crawler.HANDLE_NOT_FOUND)?.sendToTarget()
             return@ErrorListener
         }
     }
 
     if (doesErrorPersist < Crawler.maxTryAgain) {
-        c.crawler.signal(Crawler.Signal.VOLLEY_ERROR, code.toString())
+        crawler?.signal(Crawler.Signal.VOLLEY_ERROR, code.toString())
         Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
-    } else c.crawler.signal(Crawler.Signal.VOLLEY_NOT_WORKING, it.message.toString())
+    } else crawler?.signal(Crawler.Signal.VOLLEY_NOT_WORKING, it.message.toString())
     doesErrorPersist++
 }) {
     init {
@@ -46,26 +50,30 @@ class Fetcher(
     }
 
     @Suppress("SpellCheckingInspection")
-    override fun getHeaders(): HashMap<String, String> = c.crawler.headers.apply {
-        if (method == Method.POST) {
-            this["content-type"] = "application/x-www-form-urlencoded"
-            this["sec-fetch-site"] = "same-origin"
-            this["x-requested-with"] = "XMLHttpRequest"
-            if (this["cookie"]!!.contains("csrftoken="))
-                this["x-csrftoken"] = this["cookie"]!!
-                    .substringAfter("csrftoken=")
-                    .substringBefore(";")
-        } else this["sec-fetch-site"] = "same-site"
-    }
+    override fun getHeaders(): HashMap<String, String> =
+        (crawler?.headers ?: Crawler.deployHeaders(c)).apply {
+            if (method == Method.POST) {
+                this["content-type"] = "application/x-www-form-urlencoded"
+                this["sec-fetch-site"] = "same-origin"
+                this["x-requested-with"] = "XMLHttpRequest"
+                if (this["cookie"]!!.contains("csrftoken="))
+                    this["x-csrftoken"] = this["cookie"]!!
+                        .substringAfter("csrftoken=")
+                        .substringBefore(";")
+            } else this["sec-fetch-site"] = "same-site"
+        }
 
     override fun getBody(): ByteArray = encode(body)?.encodeToByteArray() ?: super.getBody()
 
-    override fun deliverResponse(response: ByteArray) = listener.onResponse(response)
+    override fun deliverResponse(response: ByteArray) = onSuccess.onResponse(response)
 
     override fun parseNetworkResponse(response: NetworkResponse): Response<ByteArray> =
         Response.success(response.data as ByteArray, HttpHeaderParser.parseCacheHeaders(response))
 
-    class Listener(private val listener: OnFinished) : Response.Listener<ByteArray> {
+    class Listener(
+        private val handler: Handler? = Crawler.handler,
+        private val listener: OnFinished
+    ) : Response.Listener<ByteArray> {
         override fun onResponse(response: ByteArray) {
             try {
                 val res = decode(response)
@@ -75,7 +83,7 @@ class Fetcher(
             } catch (ignored: Exception) {
                 doesErrorPersist = 0
                 Panel.handler?.obtainMessage(Panel.Action.WAVE_DOWN.ordinal)?.sendToTarget()
-                Transit(listener, response)
+                Transit(handler, listener, response)
             }
         }
 
@@ -83,9 +91,9 @@ class Fetcher(
             fun onFinished(response: ByteArray)
         }
 
-        class Transit(val listener: OnFinished, val response: ByteArray) {
+        class Transit(handler: Handler?, val listener: OnFinished, val response: ByteArray) {
             init {
-                Crawler.handler?.obtainMessage(Crawler.HANDLE_VOLLEY, this)?.sendToTarget()
+                handler?.obtainMessage(HANDLE_VOLLEY, this)?.sendToTarget()
             }
         }
     }
@@ -107,6 +115,7 @@ class Fetcher(
     }
 
     companion object {
+        const val HANDLE_VOLLEY = 99
         const val postHash = "8c2a529969ee035a5063f2fc8602a0fd"
         var doesErrorPersist = 0
 

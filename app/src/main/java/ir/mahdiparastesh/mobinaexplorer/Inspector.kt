@@ -40,7 +40,10 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             when (msg.what) {
                 ANALYZED -> {
                     val newlyQualified = qualified != null && c.crawler.candidate(
-                        Candidate(nom.id, qualified?.res?.mobina() ?: -1f, qualified!!.where)
+                        Candidate(
+                            nom.id, qualified?.res?.mobina() ?: -1f, qualified!!.where,
+                            Crawler.now()
+                        )
                     )
                     if (newlyQualified) c.crawler.signal(Signal.QUALIFIED, nom.user)
                     if (!nom.anal) dao.updateNominee(nom.analyzed())
@@ -87,7 +90,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             if (!c.crawler.running) return@Listener
             try {
                 u = Gson().fromJson(Fetcher.decode(baPro), Rest.ProfileInfo::class.java).user
-                if (nom.accs && u.is_private && !u.friendship_status.following)
+                if (nom.accs && u.is_private && u.friendship_status?.following == false)
                     dao.updateNominee(nom.apply { accs = false })
                 unknownError = 0
             } catch (e: Exception) { // JsonSyntaxException or NullPointerException
@@ -134,6 +137,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                 return@Listener
             }
 
+            if (!c.crawler.running) return@Listener
             c.crawler.signal(Signal.PROFILE_PHOTO, nom.user)
             Fetcher(c, u.profile_pic_url, Fetcher.Listener { img ->
                 if (c.crawler.running) c.analyzer.Subject(img) { res ->

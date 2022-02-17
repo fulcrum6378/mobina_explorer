@@ -3,17 +3,20 @@ package ir.mahdiparastesh.mobinaexplorer.room
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
+import ir.mahdiparastesh.mobinaexplorer.Crawler
 
 @Entity
 class Candidate(
     @PrimaryKey(autoGenerate = false) var id: Long,
     var score: Float,
-    var where: String,
+    var scope: String,
+    var added: Long,
+    var obscure: Boolean = false,
     var rejected: Boolean = false,
     @Ignore var nominee: Nominee? = null
 ) {
     @Suppress("unused")
-    constructor() : this(-1, 0f, "")
+    constructor() : this(-1, 0f, "", Crawler.now())
 
     companion object {
         const val IN_PROFILE = "P"
@@ -29,25 +32,5 @@ class Candidate(
             }
             return i
         }
-    }
-
-    class Sort(private val by: Int) : Comparator<Candidate>{
-        companion object {
-            const val BY_SCORE = 0
-            const val BY_REJECTED = 1
-            const val BY_NOM_NAME = 2
-            const val BY_NOM_USER = 3
-        }
-
-        override fun compare(a: Candidate, b: Candidate) = when (by) {
-            BY_REJECTED -> bb(a.rejected) - bb(b.rejected)
-            BY_NOM_NAME -> a.nominee!!.name.compareTo(b.nominee!!.name)
-            BY_NOM_USER -> a.nominee!!.user.compareTo(b.nominee!!.user)
-            else -> ii(b.score) - ii(a.score)
-        }
-
-        private fun bb(b: Boolean) = if (b) 1 else 0
-
-        private fun ii(i: Float): Int = (if (i == -1f) i else i * 10000f).toInt()
     }
 }

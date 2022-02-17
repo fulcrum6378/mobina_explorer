@@ -8,8 +8,9 @@
     <string name="notif_stop">Stop</string>
 
     <!-- Panel -->
-    <string name="canSum">%d candidates</string>
-    <string name="canSumPlsRej">%d rejected</string>
+    <string name="canSumNrm">%d candidates</string>
+    <string name="canSumRej">%d rejected</string>
+    <string name="canSumObc">%d obscure</string>
     <string name="smStart">Start</string>
     <string name="smStop">Stop</string>
     <string name="smFollow">Follow</string>
@@ -20,11 +21,18 @@
     <string name="smExport">Export</string>
     <string name="exportDone">Done!</string>
     <string name="exportUndone">Failed!</string>
-    <string name="smShowRej">Show Rejected</string>
+    <string name="smList">List</string>
+    <string name="smListCan">Candidates</string>
+    <string name="smListRej">Rejected</string>
+    <string name="smListObc">Obscure</string>
+    <string name="smSort">Sort</string>
+    <string name="smSortAlphabetically">Sort Alphabetically</string>
+    <string name="smSortByDate">Sort By Date</string>
 
     <!-- ListUser -->
     <string name="cmInstagram">View in Instagram</string>
     <string name="cmInstaTools">View in InstaTools</string>
+    <string name="cmObscure">Mark as Obscure</string>
     <string name="cmRepair">Request Reparation</string>
 
     <!-- #GLOBAL -->

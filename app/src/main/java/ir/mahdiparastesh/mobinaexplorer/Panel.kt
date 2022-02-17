@@ -13,8 +13,10 @@ import android.view.View
 import android.widget.PopupMenu
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.lifecycle.ViewModel
 import ir.mahdiparastesh.mobinaexplorer.databinding.MainBinding
 import ir.mahdiparastesh.mobinaexplorer.misc.Exporter
 import ir.mahdiparastesh.mobinaexplorer.room.Candidate
@@ -31,17 +33,22 @@ import ir.mahdiparastesh.mobinaexplorer.view.UiWork
 
 @SuppressLint("ClickableViewAccessibility", "NotifyDataSetChanged")
 class Panel : ComponentActivity(), View.OnTouchListener {
-    private lateinit var c: Context
+    lateinit var c: Context
     private lateinit var b: MainBinding
+    val m: Model by viewModels()
     private lateinit var exporter: Exporter
-    var candidature: ArrayList<Candidate>? = null
     private var anStatus: ObjectAnimator? = null
     private var canScroll = 0
+
+    class Model : ViewModel() {
+        var candidature: ArrayList<Candidate>? = null
+        var listWhat = 0
+        var sortBy = 0
+    }
 
     companion object {
         const val DISABLED_ALPHA = .4f
         var handler: Handler? = null
-        var showRejected = false
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,17 +69,16 @@ class Panel : ComponentActivity(), View.OnTouchListener {
                     Action.WAVE_DOWN.ordinal ->
                         b.bytes.text = UiTools.bytes(c, Crawler.bytesSinceBoot())
                     Action.CANDIDATES.ordinal -> {
-                        candidature = ArrayList(msg.obj as List<Candidate>)
+                        m.candidature = ArrayList(msg.obj as List<Candidate>)
                         arrangeList()
                     }
-                    Action.REFRESH.ordinal -> candidature()
-                    Action.REJECT.ordinal, Action.ACCEPT.ordinal ->
-                        if (candidature != null) (msg.obj as Candidate).apply {
-                            val fnd = Candidate.findPosInList(id, candidature!!)
-                            if (fnd != -1) candidature!![fnd] = this
-                            b.candidature.adapter?.notifyDataSetChanged()
-                            canSum()
-                        }
+                    Action.REFRESH.ordinal, Action.REPAIR.ordinal -> candidature()
+                    Action.UPDATE.ordinal -> if (m.candidature != null) (msg.obj as Candidate).apply {
+                        val fnd = Candidate.findPosInList(id, m.candidature!!)
+                        if (fnd != -1) m.candidature!![fnd] = this
+                        b.candidature.adapter?.notifyDataSetChanged()
+                        canSum()
+                    }
                     Action.SUMMARY.ordinal -> AlertDialog.Builder(this@Panel)
                         .setTitle(R.string.app_name)
                         .setMessage(
@@ -88,6 +94,8 @@ class Panel : ComponentActivity(), View.OnTouchListener {
                         Toast.makeText(c, R.string.noRemPv, Toast.LENGTH_LONG).show()
                     Action.HANDLE_TEST.ordinal -> (msg.obj as Analyzer.Transit)
                         .apply { listener.onFinished(results) }
+                    Fetcher.HANDLE_VOLLEY -> (msg.obj as Fetcher.Listener.Transit)
+                        .apply { Thread { listener.onFinished(response) }.start() }
                 }
             }
         }
@@ -107,14 +115,14 @@ class Panel : ComponentActivity(), View.OnTouchListener {
                         R.id.smOnlyPv -> {
                             Explorer.onlyPv = !item.isChecked; true; }
                         R.id.smSummary -> {
-                            UiWork(c, Action.SUMMARY).start(); true; }
+                            UiWork(this@Panel, Action.SUMMARY).start(); true; }
                         R.id.smExport -> {
                             exporter.launch(); true; }
-                        R.id.smShowRej -> {
-                            showRejected = !item.isChecked
-                            candidature()
-                            true
-                        }
+                        R.id.smListCan -> listWhich(0)
+                        R.id.smListRej -> listWhich(1)
+                        R.id.smListObc -> listWhich(2)
+                        R.id.smSortAlphabetically -> sortThemBy(0)
+                        R.id.smSortByDate -> sortThemBy(1)
                         else -> false
                     }
                 }
@@ -125,7 +133,11 @@ class Panel : ComponentActivity(), View.OnTouchListener {
                 )
                 menu.findItem(R.id.smFollow).isChecked = Explorer.shouldFollow
                 menu.findItem(R.id.smOnlyPv).isChecked = Explorer.onlyPv
-                menu.findItem(R.id.smShowRej).isChecked = showRejected
+                menu.findItem(R.id.smListCan).isChecked = m.listWhat == 0
+                menu.findItem(R.id.smListRej).isChecked = m.listWhat == 1
+                menu.findItem(R.id.smListObc).isChecked = m.listWhat == 2
+                menu.findItem(R.id.smSortAlphabetically).isChecked = m.sortBy == 0
+                menu.findItem(R.id.smSortByDate).isChecked = m.sortBy == 1
                 show()
             }
         }
@@ -153,7 +165,8 @@ class Panel : ComponentActivity(), View.OnTouchListener {
         b.candidature.viewTreeObserver.addOnScrollChangedListener {
             canScroll = b.candidature.computeVerticalScrollOffset()
         }
-        candidature()
+        if (m.candidature == null) candidature()
+        else arrangeList()
 
         // UiWork(c, Action.CUSTOM_WORK, UiWork.CustomWork { dao -> }).start()
         // Thread { TfUtils.preTrain(c) }.start()
@@ -253,32 +266,52 @@ class Panel : ComponentActivity(), View.OnTouchListener {
         vis(b.status, state == Explorer.State.ACTIVE)
     }
 
+    private fun listWhich(i: Int): Boolean {
+        if (i == m.listWhat) return false
+        m.listWhat = i
+        candidature()
+        return true
+    }
+
+    private fun sortThemBy(i: Int): Boolean {
+        if (i == m.sortBy) return false
+        m.sortBy = i
+        arrangeList()
+        return true
+    }
+
     private fun candidature() {
-        UiWork(c, Action.CANDIDATES).start()
+        UiWork(this@Panel, Action.CANDIDATES).start()
     }
 
     private fun arrangeList() {
         canSum()
-        candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_NOM_USER))
-        candidature?.sortWith(Candidate.Sort(Candidate.Sort.BY_SCORE))
+        when (m.sortBy) {
+            1 -> m.candidature?.sortBy { it.added }
+            else -> m.candidature?.sortBy { it.nominee?.user }
+        }
+        m.candidature?.sortByDescending { it.score }
         if (b.candidature.adapter == null) {
             val scr = canScroll
             b.candidature.adapter = ListUser(this@Panel)
-            if (!candidature.isNullOrEmpty()) b.candidature.scrollBy(0, scr)
+            if (!m.candidature.isNullOrEmpty()) b.candidature.scrollBy(0, scr)
         } else b.candidature.adapter?.notifyDataSetChanged()
 
-        vis(b.noCan, candidature!!.isEmpty())
+        vis(b.noCan, m.candidature!!.isEmpty())
     }
 
     private fun canSum() {
         b.canSum.text = getString(
-            if (!showRejected) R.string.canSum else R.string.canSumPlsRej,
-            candidature!!.filter { it.rejected == showRejected }.size
+            when (m.listWhat) {
+                1 -> R.string.canSumRej
+                2 -> R.string.canSumObc
+                else -> R.string.canSumNrm
+            }, m.candidature!!.size
         )
     }
 
     enum class Action {
-        CANDIDATES, REJECT, ACCEPT, CUSTOM_WORK, SUMMARY,
+        CANDIDATES, UPDATE, CUSTOM_WORK, SUMMARY, REPAIR,
         WAVE_UP, WAVE_DOWN, REFRESH, USER_LINK, NO_REM_PV, HANDLE_TEST
     }
 }

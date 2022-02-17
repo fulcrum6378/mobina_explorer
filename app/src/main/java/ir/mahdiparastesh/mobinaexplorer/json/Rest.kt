@@ -16,7 +16,7 @@ open class Rest(val status: String) {
         //val follower_count: Float?,
         //val following_count: Float?,
         //val following_tag_count: Float?,
-        val friendship_status: Friendship,
+        val friendship_status: Friendship?,
         val full_name: String,
         //val has_anonymous_profile_picture: Boolean,
         //val has_guides: Boolean?,

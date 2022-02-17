@@ -7,6 +7,10 @@
         android:id="@+id/cmInstaTools"
         android:title="@string/cmInstaTools" />
     <item
+        android:id="@+id/cmObscure"
+        android:checkable="true"
+        android:title="@string/cmObscure" />
+    <item
         android:id="@+id/cmRepair"
         android:title="@string/cmRepair" />
 </menu>

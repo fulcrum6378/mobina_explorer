@@ -6,4 +6,6 @@
     <color name="CS">#222</color>
     <color name="CSV">#111</color>
     <color name="CSO">#50222222</color>
+
+    <color name="obscure">#22FFFFFF</color>
 </resources>

@@ -1,5 +1,6 @@
 package ir.mahdiparastesh.mobinaexplorer
 
+import android.content.Context
 import android.database.sqlite.SQLiteConstraintException
 import android.icu.util.Calendar
 import android.net.TrafficStats
@@ -9,7 +10,6 @@ import android.os.Message
 import android.os.Process
 import com.google.gson.Gson
 import com.google.gson.stream.JsonReader
-import ir.mahdiparastesh.mobinaexplorer.json.Rest
 import ir.mahdiparastesh.mobinaexplorer.misc.Delayer
 import ir.mahdiparastesh.mobinaexplorer.room.Candidate
 import ir.mahdiparastesh.mobinaexplorer.room.Database
@@ -39,7 +39,7 @@ class Crawler(private val c: Explorer) : Thread() {
         handler = object : Handler(handling.looper) {
             override fun handleMessage(msg: Message) {
                 when (msg.what) {
-                    HANDLE_VOLLEY -> (msg.obj as Fetcher.Listener.Transit)
+                    Fetcher.HANDLE_VOLLEY -> (msg.obj as Fetcher.Listener.Transit)
                         .apply { listener.onFinished(response) }
                     HANDLE_INTERRUPT -> {
                         dao.addSession(session)
@@ -56,21 +56,12 @@ class Crawler(private val c: Explorer) : Thread() {
                         dao.deleteCandidate(inspection!!.nom.id)
                         Delayer(handling.looper) { carryOn() }
                     }
-                    HANDLE_REQ_REPAIR -> repair(msg.obj as Nominee)
                     HANDLE_SIGNED_OUT -> signal(Signal.SIGNED_OUT)
                 }
             }
         }
         db = Database.DbFile.build(c).also { dao = it.dao() }
-        headers = Gson().fromJson<HashMap<String, String>?>(
-            JsonReader(InputStreamReader(c.resources.assets.open("headers.json"))),
-            HashMap::class.java
-        ).apply {
-            this["Referer"] = "https://www.instagram.com/"
-            this["Referrer-Policy"] = "strict-origin-when-cross-origin"
-            this["Access-Control-Allow-Origin"] = "https://www.instagram.com/"
-            this["Access-Control-Allow-Credentials"] = "true"
-        }
+        headers = deployHeaders(c)
         carryOn()
         //inspection = Inspector(c, dao.nominee(""), true)
     }
@@ -136,22 +127,6 @@ class Crawler(private val c: Explorer) : Thread() {
             handler?.obtainMessage(HANDLE_STOP)?.sendToTarget()
     }
 
-    fun repair(nom: Nominee) {
-        Fetcher(c, Fetcher.Type.INFO.url.format(nom.id), Fetcher.Listener { info ->
-            try {
-                val newU = Gson().fromJson(Fetcher.decode(info), Rest.ProfileInfo::class.java).user
-                dao.updateNominee(nom.apply {
-                    user = newU.username
-                    name = newU.full_name
-                    accs = !newU.is_private || newU.friendship_status.following
-                })
-            } catch (ignored: Exception) {
-                //dao.deleteNominee(nom.id)
-                //dao.deleteCandidate(nom.id)
-            }
-        })
-    }
-
     override fun interrupt() {
         running = false
         inspection?.close()
@@ -192,14 +167,23 @@ class Crawler(private val c: Explorer) : Thread() {
 
     companion object {
         var handler: Handler? = null
-        const val HANDLE_VOLLEY = 0
-        const val HANDLE_ML_KIT = 1
-        const val HANDLE_INTERRUPT = 2
-        const val HANDLE_ERROR = 3
-        const val HANDLE_STOP = 4
-        const val HANDLE_NOT_FOUND = 5
-        const val HANDLE_REQ_REPAIR = 6
-        const val HANDLE_SIGNED_OUT = 7
+        const val HANDLE_ML_KIT = 0
+        const val HANDLE_INTERRUPT = 1
+        const val HANDLE_ERROR = 2
+        const val HANDLE_STOP = 3
+        const val HANDLE_NOT_FOUND = 4
+        const val HANDLE_SIGNED_OUT = 5
+
+        fun deployHeaders(c: Context): HashMap<String, String> =
+            Gson().fromJson<HashMap<String, String>?>(
+                JsonReader(InputStreamReader(c.resources.assets.open("headers.json"))),
+                HashMap::class.java
+            ).apply {
+                this["Referer"] = "https://www.instagram.com/"
+                this["Referrer-Policy"] = "strict-origin-when-cross-origin"
+                this["Access-Control-Allow-Origin"] = "https://www.instagram.com/"
+                this["Access-Control-Allow-Credentials"] = "true"
+            }
 
         fun newCandidate(can: Candidate, dao: Database.DAO): Boolean = try {
             dao.addCandidate(can)

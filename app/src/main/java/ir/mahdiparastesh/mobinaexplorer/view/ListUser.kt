@@ -4,13 +4,11 @@ import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Intent
 import android.icu.text.DecimalFormat
-import android.os.CountDownTimer
 import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.PopupMenu
 import androidx.recyclerview.widget.RecyclerView
-import ir.mahdiparastesh.mobinaexplorer.Crawler
 import ir.mahdiparastesh.mobinaexplorer.Panel
 import ir.mahdiparastesh.mobinaexplorer.R
 import ir.mahdiparastesh.mobinaexplorer.databinding.ListUserBinding
@@ -25,37 +23,45 @@ class ListUser(private val c: Panel) : RecyclerView.Adapter<ListUser.ViewHolder>
 
     @SuppressLint("SetTextI18n")
     override fun onBindViewHolder(h: ViewHolder, i: Int) {
-        if (c.candidature == null) return
+        if (c.m.candidature == null) return
 
-        val scr = if (c.candidature!![i].score != -1f)
-            DecimalFormat("#.##").format(c.candidature!![i].score * 100f) + "%"
+        val scr = if (c.m.candidature!![i].score != -1f)
+            DecimalFormat("#.##").format(c.m.candidature!![i].score * 100f) + "%"
         else "nominal"
-        h.b.name.text = "${i + 1}. ${c.candidature!![i].nominee?.name} ($scr)"
-        val spot = c.candidature!![i].where
+        h.b.name.text = "${i + 1}. ${c.m.candidature!![i].nominee?.name} ($scr)"
+        val scope = c.m.candidature!![i].scope
         val where = when {
-            spot == "P" -> "avatar"
-            spot == "PT" -> "bio"
-            spot.startsWith("T_") -> "post ${
+            scope == "P" -> "avatar"
+            scope == "PT" -> "bio"
+            scope.startsWith("T_") -> "post ${
                 try {
-                    spot.substring(2).toInt() + 1
+                    scope.substring(2).toInt() + 1
                 } catch (ignored: NumberFormatException) {
-                    spot.substring(2)
+                    scope.substring(2)
                 }
             } -> caption"
             else -> {
-                val pp = spot.split("_")
+                val pp = scope.split("_")
                 "post ${pp[0].toInt() + 1} -> slide ${pp[1].toInt() + 1}"
             }
         }
-        h.b.user.text = "${c.candidature!![i].nominee?.user} -> $where"
+        h.b.user.text = "${c.m.candidature!![i].nominee?.user} -> $where"
 
-        h.b.root.alpha = if (c.candidature!![i].rejected) Panel.DISABLED_ALPHA else 1f
+        h.b.root.alpha = if (c.m.candidature!![i].rejected) Panel.DISABLED_ALPHA else 1f
+        h.b.root.setBackgroundResource(
+            if (c.m.candidature!![i].obscure) R.color.obscure else R.drawable.button
+        )
         h.b.root.setOnClickListener { v ->
             PopupMenu(ContextThemeWrapper(c, R.style.Theme_MobinaExplorer), v).apply {
                 setOnMenuItemClickListener {
+                    if (c.m.candidature == null || h.layoutPosition >= c.m.candidature!!.size)
+                        return@setOnMenuItemClickListener false
                     when (it.itemId) {
                         R.id.cmInstagram -> {
-                            UiTools.openProfile(c, c.candidature!![h.layoutPosition].nominee!!.user)
+                            UiTools.openProfile(
+                                c,
+                                c.m.candidature!![h.layoutPosition].nominee!!.user
+                            )
                             true; }
                         R.id.cmInstaTools -> {
                             c.startActivity(Intent().apply {
@@ -64,44 +70,45 @@ class ListUser(private val c: Panel) : RecyclerView.Adapter<ListUser.ViewHolder>
                                     "ir.mahdiparastesh.instatools.Viewer"
                                 )
                                 putExtra(
-                                    "EXTRA_USER", c.candidature!![h.layoutPosition].nominee!!.user
+                                    "EXTRA_USER", c.m.candidature!![h.layoutPosition].nominee!!.user
                                 )
                                 putExtra(
-                                    "EXTRA_ID", c.candidature!![h.layoutPosition].id.toString()
+                                    "EXTRA_ID", c.m.candidature!![h.layoutPosition].id.toString()
                                 )
-                            })// c.finish()
-                            true
-                        }
-                        R.id.cmRepair -> {
-                            Crawler.handler?.let { handler ->
-                                handler.obtainMessage(
-                                    Crawler.HANDLE_REQ_REPAIR,
-                                    c.candidature!![h.layoutPosition].nominee
-                                ).sendToTarget()
-                                val wait = 5000L
-                                object : CountDownTimer(wait, wait) {
-                                    override fun onTick(millisUntilFinished: Long) {}
-                                    override fun onFinish() {
-                                        Panel.handler?.obtainMessage(Panel.Action.REFRESH.ordinal)
-                                            ?.sendToTarget()
+                            })
+                            true; }
+                        R.id.cmObscure -> {
+                            UiWork(
+                                c, Panel.Action.UPDATE, c.m.candidature!![h.layoutPosition]
+                                    .apply {
+                                        obscure = !c.m.candidature!![h.layoutPosition].obscure
                                     }
-                                }.start()
-                            }; true; }
+                            ).start()
+                            true; }
+                        R.id.cmRepair -> {
+                            UiWork(
+                                c, Panel.Action.REPAIR, c.m.candidature!![h.layoutPosition].nominee
+                            ).start(); true; }
                         else -> false
                     }
                 }
                 inflate(R.menu.candidate)
+                menu.findItem(R.id.cmObscure).isChecked =
+                    c.m.candidature!![h.layoutPosition].obscure
                 show()
             }
         }
         h.b.root.setOnLongClickListener {
+            if (c.m.candidature == null || h.layoutPosition >= c.m.candidature!!.size)
+                return@setOnLongClickListener true
             UiWork(
-                c, if (!c.candidature!![h.layoutPosition].rejected) Panel.Action.REJECT
-                else Panel.Action.ACCEPT, c.candidature!![h.layoutPosition]
+                c, Panel.Action.UPDATE, c.m.candidature!![h.layoutPosition].apply {
+                    rejected = !c.m.candidature!![h.layoutPosition].rejected
+                }
             ).start()
             true
         }
     }
 
-    override fun getItemCount() = c.candidature!!.size
+    override fun getItemCount() = c.m.candidature!!.size
 }

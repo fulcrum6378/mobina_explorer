@@ -7,10 +7,7 @@ import androidx.room.Database
 import ir.mahdiparastesh.mobinaexplorer.Explorer
 import java.io.File
 
-@Database(
-    entities = [Nominee::class, Candidate::class, Session::class],
-    version = 1, exportSchema = false
-)
+@Database(version = 2, entities = [Nominee::class, Candidate::class, Session::class])
 abstract class Database : RoomDatabase() {
     abstract fun dao(): DAO
 
@@ -55,13 +52,16 @@ abstract class Database : RoomDatabase() {
 
 
         @Query("SELECT * FROM Candidate")
-        fun candidates(): List<Candidate>
+        fun allCandidates(): List<Candidate>
 
-        @Query("SELECT * FROM Candidate WHERE rejected = 0")
-        fun nrCandidates(): List<Candidate>
+        @Query("SELECT * FROM Candidate WHERE rejected = 0 AND obscure = 0")
+        fun nrmCandidates(): List<Candidate>
 
         @Query("SELECT * FROM Candidate WHERE rejected = 1")
-        fun orCandidates(): List<Candidate>
+        fun rejCandidates(): List<Candidate>
+
+        @Query("SELECT * FROM Candidate WHERE rejected = 0 AND obscure = 1")
+        fun obcCandidates(): List<Candidate>
 
         @Query("SELECT * FROM candidate WHERE id LIKE :id LIMIT 1")
         fun candidate(id: Long): Candidate
@@ -85,7 +85,16 @@ abstract class Database : RoomDatabase() {
 
             fun build(c: Context, mainThread: Boolean = false) = Room.databaseBuilder(
                 c, ir.mahdiparastesh.mobinaexplorer.room.Database::class.java, DATABASE
-            ).apply { if (mainThread) allowMainThreadQueries() }.build()
+            ).apply {
+                if (mainThread) allowMainThreadQueries()
+                /*addMigrations(object : Migration(1, 2) {
+                    override fun migrate(db: SupportSQLiteDatabase) {
+                        db.execSQL("ALTER TABLE Candidate RENAME COLUMN \"where\" TO \"scope\"")
+                        db.execSQL("ALTER TABLE Candidate ADD COLUMN added INTEGER NOT NULL DEFAULT 0")
+                        db.execSQL("ALTER TABLE Candidate ADD COLUMN obscure INTEGER NOT NULL DEFAULT 0")
+                    }
+                })*/ // THIS WAS A MANUAL MIGRATION!!
+            }.build()
         }
 
         @Suppress("unused")

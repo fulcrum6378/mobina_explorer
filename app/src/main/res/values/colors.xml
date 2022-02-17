@@ -12,4 +12,5 @@
     <color name="analyzer">@color/alarm</color>
     <color name="analyzer_pressed">#44D816A1</color>
     <color name="shadow">#55000000</color>
+    <color name="obscure">#22595959</color>
 </resources>
