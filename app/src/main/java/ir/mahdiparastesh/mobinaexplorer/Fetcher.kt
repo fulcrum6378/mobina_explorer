@@ -35,7 +35,7 @@ class Fetcher(
 
     if (doesErrorPersist < Crawler.maxTryAgain) {
         crawler?.signal(Crawler.Signal.VOLLEY_ERROR, code.toString())
-        Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
+        Crawler.handler?.obtainMessage(HANDLE_ERROR)?.sendToTarget()
     } else crawler?.signal(Crawler.Signal.VOLLEY_NOT_WORKING, it.message.toString())
     doesErrorPersist++
 }) {
@@ -79,7 +79,7 @@ class Fetcher(
                 val res = decode(response)
                 if (!res.contains("Log in • Instagram") || !res.startsWith("<!DOCTYPE html>"))
                     throw Exception("NORMAL")
-                Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
+                handler?.obtainMessage(HANDLE_ERROR)?.sendToTarget()
             } catch (ignored: Exception) {
                 doesErrorPersist = 0
                 Panel.handler?.obtainMessage(Panel.Action.WAVE_DOWN.ordinal)?.sendToTarget()
@@ -116,6 +116,7 @@ class Fetcher(
 
     companion object {
         const val HANDLE_VOLLEY = 99
+        const val HANDLE_ERROR = 98
         const val postHash = "8c2a529969ee035a5063f2fc8602a0fd"
         var doesErrorPersist = 0
 

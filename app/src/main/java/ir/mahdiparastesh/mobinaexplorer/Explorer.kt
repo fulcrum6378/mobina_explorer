@@ -90,13 +90,16 @@ class Explorer : Service() {
     override fun onBind(intent: Intent): IBinder? = null
 
     companion object {
+        const val STRATEGY_ANALYSE = 0
+        const val STRATEGY_COLLECT = 1
+        const val STRATEGY_SEARCH = 2
         const val CH_ID = 103
         const val HANDLE_STATUS = 0
         lateinit var handler: Handler
+        var strategy = 0 // 0 => Analyse, 1 => Collect, 2 => Search
         val pack: String = Explorer::class.java.`package`!!.name
         val state = MutableLiveData(State.OFF)
         val status = MutableLiveData(Crawler.Signal.OFF.s)
-        var shouldFollow = false
         var onlyPv = false
 
         fun pi(c: Context, code: Code): PendingIntent = PendingIntent.getService(

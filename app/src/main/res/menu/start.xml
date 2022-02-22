@@ -10,10 +10,25 @@
         android:title="@string/smSummary" />
 
     <item
-        android:id="@+id/smFollow"
-        android:checkable="true"
-        android:checked="true"
-        android:title="@string/smFollow" />
+        android:id="@+id/smStrategy"
+        android:title="@string/smStrategy">
+
+        <menu>
+            <item
+                android:id="@+id/smStrAnalyse"
+                android:checkable="true"
+                android:checked="true"
+                android:title="@string/smAnalyse" />
+            <item
+                android:id="@+id/smStrCollect"
+                android:checkable="true"
+                android:title="@string/smCollect" />
+            <item
+                android:id="@+id/smStrSearch"
+                android:checkable="true"
+                android:title="@string/smSearch" />
+        </menu>
+    </item>
 
     <item
         android:id="@+id/smList"
@@ -52,10 +67,6 @@
                 android:title="@string/smSortByDate" />
         </menu>
     </item>
-
-    <item
-        android:id="@+id/smExport"
-        android:title="@string/smExport" />
 
     <item
         android:id="@+id/smOnlyPv"

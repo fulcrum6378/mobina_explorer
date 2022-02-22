@@ -49,7 +49,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                     if (!nom.anal) dao.updateNominee(nom.analyzed())
                     val doNotWait = msg.obj == false
                     if (nom.accs && nom.proximity() != null && !nom.fllw) {
-                        if (Explorer.shouldFollow) {
+                        if (Explorer.strategy == Explorer.STRATEGY_COLLECT) {
                             if (!newlyQualified) c.crawler.signal(Signal.FOLLOWERS_W, nom.user, "0")
                             Delayer(l) { allFollow(Type.FOLLOWERS) }
                         } else bye(done = false, signal = !newlyQualified, wait = !doNotWait)
@@ -77,9 +77,9 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         var shallFetch = true
 
         val scopes = arrayListOf<String?>(nom.user, nom.name)
-        if (searchScopes(true, *scopes.toTypedArray()) && !forceAnalyze)
+        if (searchScopes(proximity, *scopes.toTypedArray()) && !forceAnalyze)
             revertProximity()
-        if (searchScopes(false, *scopes.toTypedArray()) && !forceAnalyze)
+        if (searchScopes(keywords, *scopes.toTypedArray()) && !forceAnalyze)
             qualified = Qualification(null, Candidate.IN_PROFILE_TEXT)
         if (shallFetch && nom.anal && !forceAnalyze) {
             handler.obtainMessage(handler.ANALYZED, false).sendToTarget()
@@ -105,8 +105,8 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                 scopes.add(nom.name)
             }
             scopes.add(u.biography)
-            if (searchScopes(true, *scopes.toTypedArray())) revertProximity()
-            if (searchScopes(false, *scopes.toTypedArray()))
+            if (searchScopes(proximity, *scopes.toTypedArray())) revertProximity()
+            if (searchScopes(keywords, *scopes.toTypedArray()))
                 qualified = Qualification(null, Candidate.IN_PROFILE_TEXT)
             else {
                 handler.obtainMessage(handler.ANALYZED).sendToTarget()
@@ -120,7 +120,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         unknownError++
         if (unknownError < Crawler.maxTryAgain) {
             c.crawler.signal(Signal.INVALID_RESULT)
-            Crawler.handler?.obtainMessage(Crawler.HANDLE_ERROR)?.sendToTarget()
+            Crawler.handler?.obtainMessage(Fetcher.HANDLE_ERROR)?.sendToTarget()
         } else c.crawler.signal(Signal.UNKNOWN_ERROR)
     }
 
@@ -198,9 +198,9 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         }
 
         val node = timeline.edges[i].node
-        if (searchScopes(true, node.location?.name, node.accessibility_caption))
+        if (searchScopes(proximity, node.location?.name, node.accessibility_caption))
             revertProximity()
-        if (searchScopes(false, node.accessibility_caption) && qualified == null)
+        if (searchScopes(keywords, node.accessibility_caption) && qualified == null)
             qualified = Qualification(null, Candidate.IN_POST_TEXT.format(analyzedPosts))
 
         analSlide(i, arrayListOf(node.display_url).apply {
@@ -287,7 +287,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
     }
 
     private fun preferredFollow(ru: Rest.User, prx: Boolean) =
-        searchScopes(prx, ru.username, ru.full_name)
+        searchScopes(if (prx) proximity else keywords, ru.username, ru.full_name)
 
     private fun revertProximity() {
         nom.step = 0
@@ -325,20 +325,17 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                                 )
                             )
                         }
-                        c.crawler.carryOn()
+                        Delayer(c.crawler.handling.looper) { c.crawler.carryOn() }
                     }, true, Request.Method.POST,
                     preFriend + users.joinToString(sepFriendId) { it.user.pk }
                 )
             })
 
-        fun searchScopes(prx: Boolean, vararg scopes: String?): Boolean {
-            for (wrd in scopes) {
-                if (wrd.isNullOrBlank()) continue
-                if (prx) for (kwd in proximity) {
-                    if (wrd.contains(kwd, true)) return true
-                } else for (skw in keywords)
-                    if (wrd.contains(skw, true)) return true
-            }
+        fun searchScopes(keywords: Array<String>, vararg scopes: String?): Boolean {
+            for (wrd in scopes) if (!wrd.isNullOrBlank())
+                for (kwd in keywords)
+                    if (wrd.contains(kwd, true))
+                        return true
             return false
         }
     }

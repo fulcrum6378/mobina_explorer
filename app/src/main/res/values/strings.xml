@@ -13,12 +13,15 @@
     <string name="canSumObc">%d obscure</string>
     <string name="smStart">Start</string>
     <string name="smStop">Stop</string>
-    <string name="smFollow">Follow</string>
+    <string name="smStrategy">Strategy</string>
+    <string name="smAnalyse">Analyse</string>
+    <string name="smCollect">Collect</string>
+    <string name="smSearch">Search</string>
     <string name="smOnlyPv">Only Inaccessible</string>
     <string name="noRemPv">No remaining inaccessible profiles!</string>
     <string name="smSummary">Summary</string>
     <string name="summary">The database has %1\$s nominees.\n%2\$s percent have been analyzed.\n%3\$s percent have been followed.</string>
-    <string name="smExport">Export</string>
+    <string name="export">Export</string>
     <string name="exportDone">Done!</string>
     <string name="exportUndone">Failed!</string>
     <string name="smList">List</string>

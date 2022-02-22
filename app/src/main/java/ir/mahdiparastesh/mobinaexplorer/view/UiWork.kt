@@ -40,24 +40,27 @@ class UiWork(
             }.toTypedArray()
             Action.REPAIR -> (input as Nominee).apply {
                 async = true
-                Fetcher(c, Fetcher.Type.INFO.url.format(id), Fetcher.Listener(Panel.handler) { info ->
-                    val newU =
-                        Gson().fromJson(Fetcher.decode(info), Rest.ProfileInfo::class.java).user
-                    user = newU.username
-                    name = newU.full_name
-                    accs = !newU.is_private || newU.friendship_status?.following == true
-                    // "friendship_status" appears to be always null in INFO
-                    dao.updateNominee(this)
-                    Panel.handler?.obtainMessage(work.ordinal)?.sendToTarget()
-                    db.close()
-                }, onError = {
-                    if (it.networkResponse?.statusCode == 404) {
-                        dao.deleteNominee(id)
-                        dao.deleteCandidate(id)
-                        Panel.handler?.obtainMessage(work.ordinal)?.sendToTarget()
-                        db.close()
-                    }
-                })
+                Fetcher(
+                    c, Fetcher.Type.INFO.url.format(id), Fetcher.Listener(Panel.handler) { info ->
+                        val newU =
+                            Gson().fromJson(Fetcher.decode(info), Rest.ProfileInfo::class.java).user
+                        user = newU.username
+                        name = newU.full_name
+                        accs = !newU.is_private || newU.friendship_status?.following == true
+                        // "friendship_status" appears to be always null in INFO
+                        Thread {
+                            dao.updateNominee(this)
+                            Panel.handler?.obtainMessage(work.ordinal)?.sendToTarget()
+                            db.close()
+                        }.start()
+                    }, onError = {
+                        if (it.networkResponse?.statusCode == 404) Thread {
+                            dao.deleteNominee(id)
+                            dao.deleteCandidate(id)
+                            Panel.handler?.obtainMessage(work.ordinal)?.sendToTarget()
+                            db.close()
+                        }.start()
+                    })
             }
             else -> null
         }

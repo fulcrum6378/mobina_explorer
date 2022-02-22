@@ -41,6 +41,7 @@ class Crawler(private val c: Explorer) : Thread() {
                 when (msg.what) {
                     Fetcher.HANDLE_VOLLEY -> (msg.obj as Fetcher.Listener.Transit)
                         .apply { listener.onFinished(response) }
+                    Fetcher.HANDLE_ERROR -> Delayer(handling.looper) { carryOn() }
                     HANDLE_INTERRUPT -> {
                         dao.addSession(session)
                         db.close()
@@ -49,7 +50,6 @@ class Crawler(private val c: Explorer) : Thread() {
                     }
                     HANDLE_ML_KIT -> (msg.obj as Analyzer.Transit)
                         .apply { listener.onFinished(results) }
-                    HANDLE_ERROR -> Delayer(handling.looper) { carryOn() }
                     HANDLE_STOP -> c.destroy()
                     HANDLE_NOT_FOUND -> if (inspection != null) {
                         dao.deleteNominee(inspection!!.nom.id)
@@ -69,7 +69,7 @@ class Crawler(private val c: Explorer) : Thread() {
     private fun queue() {
         val toBeQueue = when {
             Explorer.onlyPv -> dao.nomineesPv()
-            !Explorer.shouldFollow -> dao.nomineesNf()
+            Explorer.strategy == Explorer.STRATEGY_ANALYSE -> dao.nomineesNf()
             else -> dao.nominees()
         }.sortedBy { it.step.toInt() }
         if (toBeQueue.isEmpty()) {
@@ -77,16 +77,12 @@ class Crawler(private val c: Explorer) : Thread() {
                 Explorer.onlyPv = false
                 Panel.handler?.obtainMessage(Panel.Action.NO_REM_PV.ordinal)?.sendToTarget()
                 carryOn()
-                return
-            } else proximity.random().apply {
-                signal(Signal.SEARCHING, this)
-                Inspector.search(c, this)
-            }
+            } else search()
             return; }
-        val preferred = if (!Explorer.shouldFollow)
-            toBeQueue.filter { Inspector.searchScopes(false, it.user, it.name) }
+        val preferred = if (Explorer.strategy == Explorer.STRATEGY_ANALYSE)
+            toBeQueue.filter { Inspector.searchScopes(keywords, it.user, it.name) }
         else
-            toBeQueue.filter { Inspector.searchScopes(true, it.user, it.name) }
+            toBeQueue.filter { Inspector.searchScopes(proximity, it.user, it.name) }
         queued.addAll(preferred.ifEmpty { toBeQueue })
     }
 
@@ -94,10 +90,19 @@ class Crawler(private val c: Explorer) : Thread() {
         inspection?.close()
         inspection = null
         if (!running) return
-        if (queued.isEmpty() || Explorer.shouldFollow) queue()
+        if (Explorer.strategy == Explorer.STRATEGY_SEARCH) {
+            search(); return; }
+        if (queued.isEmpty() || Explorer.strategy == Explorer.STRATEGY_COLLECT) queue()
         (0 until queued.size).random().apply {
             inspection = Inspector(c, queued[this])
             queued.removeAt(this)
+        }
+    }
+
+    private fun search() {
+        proximity.random().apply {
+            signal(Signal.SEARCHING, this)
+            Inspector.search(c, this)
         }
     }
 
@@ -121,8 +126,8 @@ class Crawler(private val c: Explorer) : Thread() {
     fun signal(status: Signal, vararg s: String) {
         Explorer.handler.obtainMessage(Explorer.HANDLE_STATUS, status.s.format(*s))
             .sendToTarget()
-        Panel.handler?.obtainMessage(Panel.Action.USER_LINK.ordinal, inspection?.nom?.user)
-            ?.sendToTarget()
+        if (status == Signal.INSPECTING)
+            Panel.handler?.obtainMessage(Panel.Action.USER_LINK.ordinal, s[0])?.sendToTarget()
         if (status in arrayOf(Signal.SIGNED_OUT, Signal.VOLLEY_NOT_WORKING, Signal.UNKNOWN_ERROR))
             handler?.obtainMessage(HANDLE_STOP)?.sendToTarget()
     }
@@ -169,10 +174,9 @@ class Crawler(private val c: Explorer) : Thread() {
         var handler: Handler? = null
         const val HANDLE_ML_KIT = 0
         const val HANDLE_INTERRUPT = 1
-        const val HANDLE_ERROR = 2
-        const val HANDLE_STOP = 3
-        const val HANDLE_NOT_FOUND = 4
-        const val HANDLE_SIGNED_OUT = 5
+        const val HANDLE_STOP = 2
+        const val HANDLE_NOT_FOUND = 3
+        const val HANDLE_SIGNED_OUT = 4
 
         fun deployHeaders(c: Context): HashMap<String, String> =
             Gson().fromJson<HashMap<String, String>?>(
@@ -232,7 +236,11 @@ class Crawler(private val c: Explorer) : Thread() {
         const val MED_DISTANCE = (6).toByte() // {4, 5, 6}
         const val MAX_DISTANCE = (9).toByte() // {7, 8, 9}
 
-        fun humanDelay() = if (Explorer.shouldFollow) 6000L else 3000L
+        fun humanDelay() = when (Explorer.strategy) {
+            Explorer.STRATEGY_COLLECT -> 6000L
+            Explorer.STRATEGY_SEARCH -> 9000L
+            else -> 3000L
+        }
 
         // 10+ step followers/following won't be fetched
         val proximity = arrayOf(
@@ -240,5 +248,16 @@ class Crawler(private val c: Explorer) : Thread() {
             "qazvin", "gazvin", "ghazvin", "قزوین"
         )
         val keywords = arrayOf("mobina", "مبینا", "مبینآ")
+        /*val antiWords = arrayOf(
+            "آژانس", "املاک", "فروش", "خرید", "کابینت", "درمان", "برنج",
+            "خودرو", "بورس", "بیمه", "اهل بیت", "(ع)", "امام", "الله", "صلوات",
+            "buy", "sell", "stock", "insurance", "cabinet", "kumar", "india", "ة", "ء"
+            // Many Iranians used Cyrillic alphabet in their profiles
+        )
+        dao.allNominees().filter {
+                val scopes = arrayOf(it.user, it.name)
+                !Inspector.searchScopes(Crawler.proximity.plus(Crawler.keywords), *scopes) &&
+                        Inspector.searchScopes(Crawler.antiWords, *scopes)
+            }.forEach { dao.deleteNominee(it.id) }*/
     }
 }

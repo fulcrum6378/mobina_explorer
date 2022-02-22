@@ -42,8 +42,8 @@ class Panel : ComponentActivity(), View.OnTouchListener {
 
     class Model : ViewModel() {
         var candidature: ArrayList<Candidate>? = null
-        var listWhat = 0
-        var sortBy = 0
+        var listWhat = 0 // 0 => Normal, 1 => Rejected, 2 => Obscure
+        var sortBy = 0 // 0 => Alphabet, 1 => Date
     }
 
     companion object {
@@ -84,7 +84,9 @@ class Panel : ComponentActivity(), View.OnTouchListener {
                         .setMessage(
                             c.getString(R.string.summary).format(*(msg.obj as Array<String>))
                         )
-                        .setNeutralButton(R.string.ok, null).create().show()
+                        .setPositiveButton(R.string.ok, null)
+                        .setNeutralButton(R.string.export) { _, _ -> exporter.launch() }
+                        .create().show()
                     Action.USER_LINK.ordinal -> (msg.obj as String?).apply {
                         if (this != null)
                             b.status.setOnClickListener { UiTools.openProfile(this@Panel, this) }
@@ -95,7 +97,9 @@ class Panel : ComponentActivity(), View.OnTouchListener {
                     Action.HANDLE_TEST.ordinal -> (msg.obj as Analyzer.Transit)
                         .apply { listener.onFinished(results) }
                     Fetcher.HANDLE_VOLLEY -> (msg.obj as Fetcher.Listener.Transit)
-                        .apply { Thread { listener.onFinished(response) }.start() }
+                        .apply { listener.onFinished(response) }
+                    Fetcher.HANDLE_ERROR ->
+                        Toast.makeText(c, Crawler.Signal.SIGNED_OUT.s, Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -110,19 +114,18 @@ class Panel : ComponentActivity(), View.OnTouchListener {
                 setOnMenuItemClickListener { item ->
                     when (item.itemId) {
                         R.id.smStart -> toggle()
-                        R.id.smFollow -> {
-                            Explorer.shouldFollow = !item.isChecked; true; }
-                        R.id.smOnlyPv -> {
-                            Explorer.onlyPv = !item.isChecked; true; }
                         R.id.smSummary -> {
                             UiWork(this@Panel, Action.SUMMARY).start(); true; }
-                        R.id.smExport -> {
-                            exporter.launch(); true; }
+                        R.id.smStrAnalyse -> strategize(Explorer.STRATEGY_ANALYSE)
+                        R.id.smStrCollect -> strategize(Explorer.STRATEGY_COLLECT)
+                        R.id.smStrSearch -> strategize(Explorer.STRATEGY_SEARCH)
                         R.id.smListCan -> listWhich(0)
                         R.id.smListRej -> listWhich(1)
                         R.id.smListObc -> listWhich(2)
                         R.id.smSortAlphabetically -> sortThemBy(0)
                         R.id.smSortByDate -> sortThemBy(1)
+                        R.id.smOnlyPv -> {
+                            Explorer.onlyPv = !item.isChecked; true; }
                         else -> false
                     }
                 }
@@ -131,13 +134,21 @@ class Panel : ComponentActivity(), View.OnTouchListener {
                     if (Explorer.state.value == Explorer.State.ACTIVE) R.string.smStop
                     else R.string.smStart
                 )
-                menu.findItem(R.id.smFollow).isChecked = Explorer.shouldFollow
-                menu.findItem(R.id.smOnlyPv).isChecked = Explorer.onlyPv
+                menu.findItem(R.id.smStrAnalyse).isChecked =
+                    Explorer.strategy == Explorer.STRATEGY_ANALYSE
+                menu.findItem(R.id.smStrCollect).isChecked =
+                    Explorer.strategy == Explorer.STRATEGY_COLLECT
+                menu.findItem(R.id.smStrSearch).isChecked =
+                    Explorer.strategy == Explorer.STRATEGY_SEARCH
+
                 menu.findItem(R.id.smListCan).isChecked = m.listWhat == 0
                 menu.findItem(R.id.smListRej).isChecked = m.listWhat == 1
                 menu.findItem(R.id.smListObc).isChecked = m.listWhat == 2
+
                 menu.findItem(R.id.smSortAlphabetically).isChecked = m.sortBy == 0
                 menu.findItem(R.id.smSortByDate).isChecked = m.sortBy == 1
+
+                menu.findItem(R.id.smOnlyPv).isChecked = Explorer.onlyPv
                 show()
             }
         }
@@ -168,7 +179,7 @@ class Panel : ComponentActivity(), View.OnTouchListener {
         if (m.candidature == null) candidature()
         else arrangeList()
 
-        // UiWork(c, Action.CUSTOM_WORK, UiWork.CustomWork { dao -> }).start()
+        // UiWork(this, Action.CUSTOM_WORK, UiWork.CustomWork { dao -> }).start()
         // Thread { TfUtils.preTrain(c) }.start()
         // TfUtils.test(c, b.face, b.bytes, Mobina(c).seventh)
         handler?.obtainMessage(Action.WAVE_DOWN.ordinal)?.sendToTarget()
@@ -264,6 +275,12 @@ class Panel : ComponentActivity(), View.OnTouchListener {
     private fun exploring(state: Explorer.State?) {
         b.robot.alpha = if (state == Explorer.State.ACTIVE) 1f else DISABLED_ALPHA
         vis(b.status, state == Explorer.State.ACTIVE)
+    }
+
+    private fun strategize(i: Int): Boolean {
+        if (i == Explorer.strategy) return false
+        Explorer.strategy = i
+        return true
     }
 
     private fun listWhich(i: Int): Boolean {
