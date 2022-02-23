@@ -22,7 +22,7 @@ import ir.mahdiparastesh.mobinaexplorer.room.Database
 import ir.mahdiparastesh.mobinaexplorer.room.Nominee
 
 class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean = false) {
-    private var db: Database
+    private lateinit var db: Database
     private lateinit var dao: Database.DAO
     private lateinit var u: Rest.User
     private lateinit var timeline: Media

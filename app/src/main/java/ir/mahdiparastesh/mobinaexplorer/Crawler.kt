@@ -237,9 +237,9 @@ class Crawler(private val c: Explorer) : Thread() {
         const val MAX_DISTANCE = (9).toByte() // {7, 8, 9}
 
         fun humanDelay() = when (Explorer.strategy) {
-            Explorer.STRATEGY_COLLECT -> 6000L
-            Explorer.STRATEGY_SEARCH -> 9000L
-            else -> 3000L
+            Explorer.STRATEGY_COLLECT -> 8000L
+            Explorer.STRATEGY_SEARCH -> 12000L
+            else -> 5000L
         }
 
         // 10+ step followers/following won't be fetched

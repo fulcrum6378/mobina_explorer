@@ -45,7 +45,7 @@ class Explorer : Service() {
             .createNotificationChannel(
                 NotificationChannel(
                     Code.CHANNEL.s, c.resources.getString(R.string.notif_channel),
-                    NotificationManager.IMPORTANCE_HIGH
+                    NotificationManager.IMPORTANCE_LOW
                 ).apply { description = c.resources.getString(R.string.notif_channel_desc) })
         startForeground(CH_ID, NotificationCompat.Builder(c, Code.CHANNEL.s).apply {
             setSmallIcon(R.mipmap.launcher_round)
