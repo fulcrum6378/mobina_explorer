@@ -72,9 +72,6 @@ class ListUser(private val c: Panel) : RecyclerView.Adapter<ListUser.ViewHolder>
                                 putExtra(
                                     "EXTRA_USER", c.m.candidature!![h.layoutPosition].nominee!!.user
                                 )
-                                putExtra(
-                                    "EXTRA_ID", c.m.candidature!![h.layoutPosition].id.toString()
-                                )
                             })
                             true; }
                         R.id.cmObscure -> {
