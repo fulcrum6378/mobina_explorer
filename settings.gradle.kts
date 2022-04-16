@@ -6,4 +6,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "Mobina Explorer"
-include ':app'
+include(":app")

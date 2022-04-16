@@ -11,13 +11,13 @@ import ir.mahdiparastesh.mobinaexplorer.room.Database.DbFile
 import java.io.FileInputStream
 import java.io.FileOutputStream
 
-class Exporter(that: ComponentActivity) {
+class Exporter(c: ComponentActivity) {
     private var launcher: ActivityResultLauncher<Intent> =
-        that.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        c.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             if (it.resultCode != RESULT_OK) return@registerForActivityResult
             // TODO: THIS EXPORT SUCKS, BUT SOMETIMES
             val bExp = try {
-                that.contentResolver.openFileDescriptor(it.data!!.data!!, "w")?.use { des ->
+                c.contentResolver.openFileDescriptor(it.data!!.data!!, "w")?.use { des ->
                     var db: ByteArray?
                     FileInputStream(DbFile(DbFile.Triple.MAIN)).use { fis ->
                         db = fis.readBytes()
@@ -31,7 +31,7 @@ class Exporter(that: ComponentActivity) {
                 false
             }
             Toast.makeText(
-                that, if (bExp) R.string.exportDone else R.string.exportUndone, Toast.LENGTH_LONG
+                c, if (bExp) R.string.exportDone else R.string.exportUndone, Toast.LENGTH_LONG
             ).show()
         }
 

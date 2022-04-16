@@ -29,6 +29,8 @@ class Mobina(private val c: Context) {
 
     val eleventh = photo(11) // NO FACES
 
+    val twelfth = photo(12)
+
     private fun photo(n: Int): Bitmap {
         var data: ByteArray
         c.resources.assets.open("mobina/$n.jfif").apply {

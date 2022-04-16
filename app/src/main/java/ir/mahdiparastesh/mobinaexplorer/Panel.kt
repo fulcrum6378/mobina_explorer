@@ -29,8 +29,6 @@ import ir.mahdiparastesh.mobinaexplorer.view.UiTools.Companion.square
 import ir.mahdiparastesh.mobinaexplorer.view.UiTools.Companion.vis
 import ir.mahdiparastesh.mobinaexplorer.view.UiWork
 
-// adb connect 192.168.1.20:
-
 @SuppressLint("ClickableViewAccessibility", "NotifyDataSetChanged")
 class Panel : ComponentActivity(), View.OnTouchListener {
     lateinit var c: Context
