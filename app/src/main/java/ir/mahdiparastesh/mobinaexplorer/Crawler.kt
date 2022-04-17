@@ -206,28 +206,30 @@ class Crawler(private val c: Explorer) : Thread() {
 
         fun now() = Calendar.getInstance().timeInMillis
 
+        @Suppress("UNUSED_EXPRESSION")
         fun maxPosts(prx: Byte?) = when (prx) {
-            IN_PLACE -> 11
-            MIN_DISTANCE -> 8
-            MED_DISTANCE -> 6
-            MAX_DISTANCE -> 3
-            else -> 0
+            //IN_PLACE -> 11
+            //MIN_DISTANCE -> 8
+            //MED_DISTANCE -> 6
+            //MAX_DISTANCE -> 3
+            else -> 11
         }
 
         fun maxFollow(prx: Byte?) = when (prx) {
-            IN_PLACE -> 15000
+            IN_PLACE -> 20000
             MIN_DISTANCE -> 5000
-            MED_DISTANCE -> 2500
+            MED_DISTANCE -> 2000
             MAX_DISTANCE -> 500
             else -> 0
         }
 
+        @Suppress("UNUSED_EXPRESSION")
         fun maxSlides(prx: Byte?) = when (prx) {
-            IN_PLACE -> 4
-            MIN_DISTANCE -> 3
-            MED_DISTANCE -> 2
-            MAX_DISTANCE -> 1
-            else -> 0
+            //IN_PLACE -> 4
+            //MIN_DISTANCE -> 3
+            //MED_DISTANCE -> 2
+            //MAX_DISTANCE -> 1
+            else -> 3
         }
 
         const val maxTryAgain = 6
