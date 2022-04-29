@@ -12,9 +12,7 @@ import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.keywords
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.proximity
 import ir.mahdiparastesh.mobinaexplorer.Crawler.Signal
 import ir.mahdiparastesh.mobinaexplorer.Fetcher.Type
-import ir.mahdiparastesh.mobinaexplorer.json.GraphQL
-import ir.mahdiparastesh.mobinaexplorer.json.GraphQL.EdgePost
-import ir.mahdiparastesh.mobinaexplorer.json.GraphQL.Media
+import ir.mahdiparastesh.mobinaexplorer.json.GraphQL.*
 import ir.mahdiparastesh.mobinaexplorer.json.Rest
 import ir.mahdiparastesh.mobinaexplorer.misc.Delayer
 import ir.mahdiparastesh.mobinaexplorer.room.Candidate
@@ -22,9 +20,9 @@ import ir.mahdiparastesh.mobinaexplorer.room.Database
 import ir.mahdiparastesh.mobinaexplorer.room.Nominee
 
 class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean = false) {
-    private lateinit var db: Database
+    private val db: Database
     private lateinit var dao: Database.DAO
-    private lateinit var u: Rest.User
+    private lateinit var u: User
     private lateinit var timeline: Media
     private val allPosts = arrayListOf<EdgePost>()
     private val l = c.crawler.handling.looper
@@ -86,20 +84,28 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             shallFetch = false
         }
 
-        if (shallFetch) Fetcher(c, Type.INFO.url.format(nom.id), Fetcher.Listener { baPro ->
+        if (shallFetch) Fetcher(c, Type.PROFILE.url.format(nom.user), Fetcher.Listener { baPro ->
             if (!c.crawler.running) return@Listener
+            val profile = Fetcher.decode(baPro)
+
             try {
-                u = Gson().fromJson(Fetcher.decode(baPro), Rest.ProfileInfo::class.java).user
-                if (nom.accs && u.is_private && u.friendship_status?.following == false)
-                    dao.updateNominee(nom.apply { accs = false })
+                u = Gson().fromJson(profile, Profile::class.java).graphql.user!!
+                if (nom.accs && (u.is_private == true || u.blocked_by_viewer == true
+                            || u.has_blocked_viewer == true)
+                ) dao.updateNominee(nom.apply { accs = false })
                 unknownError = 0
             } catch (e: Exception) { // JsonSyntaxException or NullPointerException
                 invalidResult()
                 return@Listener
             }
+            timeline = u.edge_owner_to_timeline_media!!
 
             if (nom.name != u.full_name) {
-                nom.name = u.full_name
+                try {
+                    nom.name = u.full_name
+                } catch (e: NullPointerException) {
+                    throw Exception(Gson().toJson(u))
+                }
                 dao.updateNominee(nom)
                 scopes.removeLast()
                 scopes.add(nom.name)
@@ -112,7 +118,18 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                 handler.obtainMessage(handler.ANALYZED).sendToTarget()
                 return@Listener
             }
-            Delayer(l) { strictAnalyse() }
+            Delayer(l) {
+                if (!c.crawler.running) return@Delayer
+                c.crawler.signal(Signal.PROFILE_PHOTO, nom.user)
+                Fetcher(c, u.profile_pic_url_hd ?: u.profile_pic_url, Fetcher.Listener { img ->
+                    if (c.crawler.running) c.analyzer.Subject(img) { res ->
+                        if (!res.isNullOrEmpty() && res.anyQualified()) {
+                            qualified = Qualification(res, Candidate.IN_PROFILE)
+                            handler.obtainMessage(handler.ANALYZED).sendToTarget()
+                        } else fetchPosts(timeline.edges)
+                    }
+                })
+            }
         })
     }
 
@@ -122,32 +139,6 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             c.crawler.signal(Signal.INVALID_RESULT)
             Crawler.handler?.obtainMessage(Fetcher.HANDLE_ERROR)?.sendToTarget()
         } else c.crawler.signal(Signal.UNKNOWN_ERROR)
-    }
-
-    private fun strictAnalyse() {
-        if (!c.crawler.running) return
-        c.crawler.signal(Signal.STRICT_ANALYSE, u.username)
-        Fetcher(c, Type.PROFILE.url.format(u.username), Fetcher.Listener { profile ->
-            try {
-                timeline = Gson().fromJson(Fetcher.decode(profile), GraphQL.Profile::class.java)
-                    .graphql.user?.edge_owner_to_timeline_media!!
-                unknownError = 0
-            } catch (e: Exception) { // JsonSyntaxException or NullPointerException
-                invalidResult()
-                return@Listener
-            }
-
-            if (!c.crawler.running) return@Listener
-            c.crawler.signal(Signal.PROFILE_PHOTO, nom.user)
-            Fetcher(c, u.profile_pic_url, Fetcher.Listener { img ->
-                if (c.crawler.running) c.analyzer.Subject(img) { res ->
-                    if (!res.isNullOrEmpty() && res.anyQualified()) {
-                        qualified = Qualification(res, Candidate.IN_PROFILE)
-                        handler.obtainMessage(handler.ANALYZED).sendToTarget()
-                    } else fetchPosts(timeline.edges)
-                }
-            })
-        })
     }
 
     @Suppress("SameParameterValue")
@@ -278,7 +269,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             val acs = !it.is_private || fs[it.pk]?.following == true
             c.crawler.nominate(
                 Nominee(
-                    it.pk.toLong(), it.username, it.full_name, acs,
+                    it.pk.toLong(), it.username, it.full_name!!, acs,
                     (if (preferredFollow(it, true)) 0 else nom.step + 1).toByte(),
                     false, !acs
                 )
@@ -320,7 +311,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                             val acs = !x.user.is_private || fs[x.user.pk]?.following == true
                             c.crawler.nominate(
                                 Nominee(
-                                    x.user.pk.toLong(), x.user.username, x.user.full_name,
+                                    x.user.pk.toLong(), x.user.username, x.user.full_name!!,
                                     acs, 0, false, !acs
                                 )
                             )

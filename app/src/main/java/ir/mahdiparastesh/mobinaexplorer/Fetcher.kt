@@ -112,6 +112,8 @@ class Fetcher(
         ),
         INFO("https://i.instagram.com/api/v1/users/%s/info/"),
         // Browser hover feature, takes ID, gets ~1% of what PROFILE gets
+        // Updated 2022.04.29: recently (or maybe it was the case even before)...
+        // INFO contains ONLY { is_private, pk, profile_pic_url, username } NOT ENOUGH
     }
 
     companion object {

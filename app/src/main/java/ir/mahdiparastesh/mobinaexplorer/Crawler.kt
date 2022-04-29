@@ -157,7 +157,6 @@ class Crawler(private val c: Explorer) : Thread() {
         INVALID_RESULT("Invalid result! Trying again..."),
         SIGNED_OUT("You're signed out :("),
         UNKNOWN_ERROR("Unknown error!!!"),
-        STRICT_ANALYSE("Beginning a stricter analyse on \"%s\"..."),
         PROFILE_PHOTO("Analyzing %s's profile photo..."),
         START_POSTS("Found nothing :( Inspecting %s's posts..."),
         RESUME_POSTS("Fetching more posts from %1\$s (currently %2\$s)..."),

@@ -12,7 +12,7 @@ android {
         minSdk = 28
         targetSdk = 31
         versionCode = 1
-        versionName = "3.7"
+        versionName = "3.8"
     }
 
     compileOptions {
@@ -35,7 +35,7 @@ dependencies {
     kapt("androidx.room:room-compiler:$roomVersion")
     implementation("com.google.mlkit:face-detection:16.1.5")
     implementation("org.tensorflow:tensorflow-lite-support:0.3.1")
-    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.5.0-alpha06")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.5.0-beta01")
     implementation("androidx.activity:activity-ktx:1.4.0") // ActivityResultLauncher + viewModels
     implementation("androidx.recyclerview:recyclerview:1.2.1")
 }

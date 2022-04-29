@@ -45,7 +45,7 @@ class UiWork(
                         val newU =
                             Gson().fromJson(Fetcher.decode(info), Rest.ProfileInfo::class.java).user
                         user = newU.username
-                        name = newU.full_name
+                        // name = newU.full_name
                         accs = !newU.is_private || newU.friendship_status?.following == true
                         // "friendship_status" appears to be always null in INFO
                         Thread {

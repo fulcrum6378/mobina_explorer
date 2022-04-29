@@ -25,7 +25,7 @@ class GraphQL(val user: User?) {
         //val category_enum: Any?,
         //val category_name: Any?,
         //val connected_fb_page: Any?,
-        val country_block: Boolean?,
+        //val country_block: Boolean?,
         //val edge_felix_video_timeline: Map<String?, *>?,
         //val edge_follow: Map<String?, *>?,
         //val edge_followed_by: Map<String?, *>?,
@@ -36,8 +36,8 @@ class GraphQL(val user: User?) {
         //val external_url: Any?,
         //val external_url_linkshimmed: Any?,
         //val fbid: String?,
-        val followed_by_viewer: Boolean?,
-        val follows_viewer: Boolean?,
+        //val followed_by_viewer: Boolean?,
+        //val follows_viewer: Boolean?,
         val full_name: String,
         //val has_ar_effects: Boolean?,
         val has_blocked_viewer: Boolean?,
@@ -54,18 +54,18 @@ class GraphQL(val user: User?) {
         val is_private: Boolean?,
         //val is_professional_account: Boolean?,
         //val is_verified: Boolean?,
-        val overall_category_name: Any?,
-        val profile_pic_url: String?,
+        //val overall_category_name: Any?,
+        val profile_pic_url: String,
         val profile_pic_url_hd: String?,
         //val pronouns: Array<Any>?,
         //val requested_by_viewer: Boolean?,
         //val restricted_by_viewer: Boolean?,
         //val should_show_category: Boolean?,
         //val should_show_public_contacts: Boolean?,
-        val username: String
+        //val username: String
     )
 
-    class Media(val page_info: PageInfo, val count: Float, val edges: Array<EdgePost>)
+    class Media(val page_info: PageInfo, /*val count: Float, */val edges: Array<EdgePost>)
 
     class PageInfo(val has_next_page: Boolean, val end_cursor: String)
 
@@ -77,7 +77,7 @@ class GraphQL(val user: User?) {
         //val clips_music_attribution_info: Any?,
         //val coauthor_producers: Array<Any>,
         //val comments_disabled: Boolean,
-        val dash_info: Map<String, *>,
+        //val dash_info: Map<String, *>,
         val display_url: String,
         //val dimensions: Map<String, Float>,
         //val edge_liked_by: Map<String, Float>,
@@ -97,7 +97,7 @@ class GraphQL(val user: User?) {
         val location: Location?,
         //val media_overlay_info: Any?,
         //val media_preview: Any?,
-        val owner: Owner,
+        //val owner: Owner,
         //val product_type: String,
         //val sharing_friction_info: Map<String, *>,
         //val shortcode: String,
@@ -109,17 +109,17 @@ class GraphQL(val user: User?) {
         //val video_view_count: Float,
     )
 
-    class Owner(val id: String, val username: String)
+    //class Owner(val id: String, val username: String)
 
-    class EdgesCaption(val edges: Array<EdgeCaption>)
+    //class EdgesCaption(val edges: Array<EdgeCaption>)
 
-    class EdgeCaption(val node: Caption)
+    //class EdgeCaption(val node: Caption)
 
-    class Caption(val text: String)
+    //class Caption(val text: String)
 
-    class EdgeTaggedUsers(val node: Array<Any>)
+    //class EdgeTaggedUsers(val node: Array<Any>)
 
-    class Src(val src: String, val config_width: Float, val config_height: Float)
+    //class Src(val src: String, val config_width: Float, val config_height: Float)
 
     class Location(
         val id: Long,
@@ -133,9 +133,9 @@ class GraphQL(val user: User?) {
     class EdgeSlide(val node: Slide)
 
     class Slide(
-        val __typename: String,
+        //val __typename: String,
         val id: String,
-        val gating_info: Any?,
+        //val gating_info: Any?,
         //val fact_check_overall_rating: Any?,
         //val fact_check_information: Any?,
         //val media_overlay_info: Any?,
@@ -143,6 +143,6 @@ class GraphQL(val user: User?) {
         //val sharing_friction_info: Map<String, *>?,
         //val dimensions: Map<String, Float>?,
         val display_url: String, // USE THIS
-        val display_resources: Array<Src>
+        //val display_resources: Array<Src>
     )
 }

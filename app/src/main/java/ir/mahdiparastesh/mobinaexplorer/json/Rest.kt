@@ -1,13 +1,15 @@
 package ir.mahdiparastesh.mobinaexplorer.json
 
 @Suppress("SpellCheckingInspection")
-open class Rest(val status: String) {
+open class Rest {
+    @Suppress("unused")
+    lateinit var status: String
 
     class User(
         //val account_badges: Array<Map<String, *>>,
         //val account_type: Float?,
         //val auto_expand_chaining: Boolean?,
-        val biography: String?,
+        //val biography: String?,
         //val can_be_reported_as_fraud: Boolean?,
         //val creator_shopping_info: Map<String, *>?,
         //val external_url: String?,
@@ -17,7 +19,7 @@ open class Rest(val status: String) {
         //val following_count: Float?,
         //val following_tag_count: Float?,
         val friendship_status: Friendship?,
-        val full_name: String,
+        val full_name: String?,
         //val has_anonymous_profile_picture: Boolean,
         //val has_guides: Boolean?,
         //val has_highlight_reels: Boolean,
@@ -48,7 +50,7 @@ open class Rest(val status: String) {
         //val profile_context: String?,
         //val profile_context_facepile_users: Array<Any>?,
         //val profile_context_links_with_user_ids: Array<Any>?,
-        val profile_pic_url: String,
+        //val profile_pic_url: String,
         //val profile_pic_id: String,
         //val pronouns: Array<Any>?,
         //val reel_auto_archive: String?,
@@ -65,18 +67,17 @@ open class Rest(val status: String) {
         //val wa_eligibility: Double?
     )
 
-    class Follow( // Both following and followers
+    class Follow(
+        // Both following and followers
         val next_max_id: String? = null,
         val users: Array<User>,
         //val big_list: Boolean,
         //val page_size: Double,
-        status: String
-    ) : Rest(status)
+    ) : Rest()
 
-    open class GraphQLResponse(val data: GraphQL, status: String) : Rest(status)
+    open class GraphQLResponse(val data: GraphQL) : Rest()
 
-    class Friendships(val friendship_statuses: Map<String, Friendship>, status: String) :
-        Rest(status)
+    class Friendships(val friendship_statuses: Map<String, Friendship>) : Rest()
 
     class Friendship(
         val following: Boolean,
@@ -94,8 +95,7 @@ open class Rest(val status: String) {
         //val rank_token: String,
         //val has_more: Boolean,
         val users: Array<ItemUser>,
-        status: String
-    ) : Rest(status) {
+    ) : Rest() {
 
         class ItemUser(val position: Float, val user: User) {
             class Sort : Comparator<ItemUser> {
@@ -105,7 +105,7 @@ open class Rest(val status: String) {
         }
     }
 
-    class ProfileInfo(val user: User, status: String) : Rest(status)
+    class ProfileInfo(val user: User) : Rest()
 
-    open class Candidate(val width: Float, val height: Float, val url: String)
+    //open class Candidate(val width: Float, val height: Float, val url: String)
 }
