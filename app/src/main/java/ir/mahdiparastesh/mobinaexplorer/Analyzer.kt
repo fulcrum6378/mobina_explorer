@@ -21,7 +21,10 @@ import kotlin.math.abs
 class Analyzer(val c: Context, val isTest: Boolean = false) {
     var model: ByteBuffer
     private val detector by lazy {
-        MlKit.initialize(c)
+        try {
+            MlKit.initialize(c)
+        } catch (ignored: IllegalStateException) {
+        }
         FaceDetection.getClient(
             FaceDetectorOptions.Builder()
                 .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
