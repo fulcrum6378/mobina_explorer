@@ -79,7 +79,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             revertProximity()
         if (searchScopes(keywords, *scopes.toTypedArray()) && !forceAnalyze)
             qualified = Qualification(null, Candidate.IN_PROFILE_TEXT)
-        if (shallFetch && nom.anal && !forceAnalyze) {
+        if (nom.anal && !forceAnalyze) {
             handler.obtainMessage(handler.ANALYZED, false).sendToTarget()
             shallFetch = false
         }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Handler
 import android.text.TextUtils
+import android.util.Log
 import com.android.volley.DefaultRetryPolicy
 import com.android.volley.NetworkResponse
 import com.android.volley.Request
@@ -77,10 +78,14 @@ class Fetcher(
         override fun onResponse(response: ByteArray) {
             try {
                 val res = decode(response)
+                Log.println(Log.ASSERT, "MOBINA", res)
                 if (!res.contains("Log in • Instagram") || !res.startsWith("<!DOCTYPE html>"))
                     throw Exception("NORMAL")
-                handler?.obtainMessage(HANDLE_ERROR)?.sendToTarget()
+                if (res.contains("Log in • Instagram"))
+                    handler?.obtainMessage(Crawler.HANDLE_SIGNED_OUT)?.sendToTarget()
+                else handler?.obtainMessage(HANDLE_ERROR)?.sendToTarget()
             } catch (ignored: Exception) {
+                Log.println(Log.ASSERT, "MOBINA", "NORMAL")
                 doesErrorPersist = 0
                 Panel.handler?.obtainMessage(Panel.Action.WAVE_DOWN.ordinal)?.sendToTarget()
                 Transit(handler, listener, response)

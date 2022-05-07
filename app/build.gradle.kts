@@ -12,7 +12,7 @@ android {
         minSdk = 28
         targetSdk = 31
         versionCode = 1
-        versionName = "3.8"
+        versionName = "3.9"
     }
 
     compileOptions {
@@ -27,7 +27,7 @@ android {
 dependencies {
     val roomVersion = "2.4.2"
 
-    implementation("com.google.android.material:material:1.5.0")
+    implementation("com.google.android.material:material:1.6.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.3")
     implementation("com.android.volley:volley:1.2.1")
     implementation("com.google.code.gson:gson:2.9.0")

@@ -51,7 +51,8 @@ class Explorer : Service() {
             setSmallIcon(R.mipmap.launcher_round)
             setContentTitle(c.resources.getString(R.string.notif_title))
             setOngoing(true)
-            priority = NotificationCompat.PRIORITY_DEFAULT
+            setProgress(0, 0, true)
+            priority = NotificationCompat.PRIORITY_LOW
             setContentIntent(
                 PendingIntent.getActivity(
                     c, 0, Intent(c, Panel::class.java), PendingIntent.FLAG_UPDATE_CURRENT
