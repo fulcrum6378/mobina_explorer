@@ -11,7 +11,6 @@ import android.os.*
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.MutableLiveData
 
-@SuppressLint("UnspecifiedImmutableFlag")
 class Explorer : Service() {
     lateinit var c: Context
     private var wakeLock: PowerManager.WakeLock? = null
@@ -55,7 +54,8 @@ class Explorer : Service() {
             priority = NotificationCompat.PRIORITY_LOW
             setContentIntent(
                 PendingIntent.getActivity(
-                    c, 0, Intent(c, Panel::class.java), PendingIntent.FLAG_UPDATE_CURRENT
+                    c, 0, Intent(c, Panel::class.java),
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
                 )
             )
             addAction(0, c.resources.getString(R.string.notif_stop), pi(c, Code.STOP))
