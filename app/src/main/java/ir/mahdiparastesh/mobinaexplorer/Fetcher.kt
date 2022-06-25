@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.Uri
 import android.os.Handler
 import android.text.TextUtils
-import android.util.Log
 import com.android.volley.DefaultRetryPolicy
 import com.android.volley.NetworkResponse
 import com.android.volley.Request
@@ -78,14 +77,12 @@ class Fetcher(
         override fun onResponse(response: ByteArray) {
             try {
                 val res = decode(response)
-                Log.println(Log.ASSERT, "MOBINA", res)
                 if (!res.contains("Log in • Instagram") || !res.startsWith("<!DOCTYPE html>"))
                     throw Exception("NORMAL")
                 if (res.contains("Log in • Instagram"))
                     handler?.obtainMessage(Crawler.HANDLE_SIGNED_OUT)?.sendToTarget()
                 else handler?.obtainMessage(HANDLE_ERROR)?.sendToTarget()
             } catch (ignored: Exception) {
-                Log.println(Log.ASSERT, "MOBINA", "NORMAL")
                 doesErrorPersist = 0
                 Panel.handler?.obtainMessage(Panel.Action.WAVE_DOWN.ordinal)?.sendToTarget()
                 Transit(handler, listener, response)
@@ -103,19 +100,19 @@ class Fetcher(
         }
     }
 
-    enum class Type(val url: String) {
+    enum class Endpoint(val url: String) {
+        PROFILE("https://i.instagram.com/api/v1/users/web_profile_info/?username=%s"),
+        INFO("https://i.instagram.com/api/v1/users/%s/info/"),
         SEARCH("https://www.instagram.com/web/search/topsearch/?context=user&query=%s"),
 
         FOLLOWERS("https://i.instagram.com/api/v1/friendships/%1\$s/followers/?max_id=%2\$s"),
         FOLLOWING("https://i.instagram.com/api/v1/friendships/%1\$s/following/?max_id=%2\$s"),
         FRIENDSHIPS("https://i.instagram.com/api/v1/friendships/show_many/"),
 
-        PROFILE("https://www.instagram.com/%s/?__a=1"),
         POSTS(
             "https://www.instagram.com/graphql/query/?query_hash=$postHash" +
                     "&variables={\"id\":\"%1\$s\",\"first\":%2\$s,\"after\":\"%3\$s\"}"
         ),
-        INFO("https://i.instagram.com/api/v1/users/%s/info/"),
         // Browser hover feature, takes ID, gets ~1% of what PROFILE gets
         // Updated 2022.04.29: recently (or maybe it was the case even before)...
         // INFO contains ONLY { is_private, pk, profile_pic_url, username } NOT ENOUGH

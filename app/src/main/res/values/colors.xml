@@ -6,7 +6,6 @@
     <color name="CS">#F9F9F9</color>
     <color name="CSV">#FFF</color>
     <color name="CSO">#50F9F9F9</color>
-    <color name="TP">#00000000</color>
 
     <color name="alarm">#D816A1</color>
     <color name="analyzer">@color/alarm</color>

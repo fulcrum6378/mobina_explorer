@@ -23,18 +23,17 @@ import ir.mahdiparastesh.mobinaexplorer.room.Candidate
 import ir.mahdiparastesh.mobinaexplorer.view.ListUser
 import ir.mahdiparastesh.mobinaexplorer.view.Momentum
 import ir.mahdiparastesh.mobinaexplorer.view.UiTools
-import ir.mahdiparastesh.mobinaexplorer.view.UiTools.Companion.color
-import ir.mahdiparastesh.mobinaexplorer.view.UiTools.Companion.dm
-import ir.mahdiparastesh.mobinaexplorer.view.UiTools.Companion.square
-import ir.mahdiparastesh.mobinaexplorer.view.UiTools.Companion.vis
+import ir.mahdiparastesh.mobinaexplorer.view.UiTools.color
+import ir.mahdiparastesh.mobinaexplorer.view.UiTools.square
+import ir.mahdiparastesh.mobinaexplorer.view.UiTools.vis
 import ir.mahdiparastesh.mobinaexplorer.view.UiWork
 
 @SuppressLint("ClickableViewAccessibility", "NotifyDataSetChanged")
 class Panel : ComponentActivity(), View.OnTouchListener {
-    lateinit var c: Context
+    val c: Context get() = applicationContext
     private lateinit var b: MainBinding
     val m: Model by viewModels()
-    private lateinit var exporter: Exporter
+    private val exporter = Exporter(this@Panel)
     private var anStatus: ObjectAnimator? = null
     private var canScroll = 0
 
@@ -53,9 +52,6 @@ class Panel : ComponentActivity(), View.OnTouchListener {
         super.onCreate(savedInstanceState)
         b = MainBinding.inflate(layoutInflater)
         setContentView(b.root)
-        c = applicationContext
-        exporter = Exporter(this@Panel)
-        dm = resources.displayMetrics
 
         // Handler
         handler = object : Handler(Looper.getMainLooper()) {
@@ -82,7 +78,7 @@ class Panel : ComponentActivity(), View.OnTouchListener {
                         .setMessage(
                             c.getString(R.string.summary).format(*(msg.obj as Array<String>))
                         )
-                        .setPositiveButton(R.string.ok, null)
+                        .setPositiveButton(android.R.string.ok, null)
                         .setNeutralButton(R.string.export) { _, _ -> exporter.launch() }
                         .create().show()
                     Action.USER_LINK.ordinal -> (msg.obj as String?).apply {

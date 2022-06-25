@@ -240,7 +240,7 @@ class Crawler(private val c: Explorer) : Thread() {
         fun humanDelay() = when (Explorer.strategy) {
             Explorer.STRATEGY_COLLECT -> 8000L
             Explorer.STRATEGY_SEARCH -> 12000L
-            else -> 5000L
+            /*Explorer.STRATEGY_ANALYSE*/else -> 5000L
         }
 
         // 10+ step followers/following won't be fetched

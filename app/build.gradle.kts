@@ -5,14 +5,15 @@ plugins {
 }
 
 android {
-    compileSdk = 31
+    compileSdk = 32
+    buildToolsVersion = "33.0.0"
 
     defaultConfig {
         applicationId = "ir.mahdiparastesh.mobinaexplorer"
         minSdk = 28
         targetSdk = 31
         versionCode = 1
-        versionName = "3.9"
+        versionName = "4.0"
     }
 
     compileOptions {
@@ -27,15 +28,15 @@ android {
 dependencies {
     val roomVersion = "2.4.2"
 
-    implementation("com.google.android.material:material:1.6.0")
-    implementation("androidx.constraintlayout:constraintlayout:2.1.3")
+    implementation("com.google.android.material:material:1.6.1")
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("com.android.volley:volley:1.2.1")
     implementation("com.google.code.gson:gson:2.9.0")
     implementation("androidx.room:room-runtime:$roomVersion")
     kapt("androidx.room:room-compiler:$roomVersion")
     implementation("com.google.mlkit:face-detection:16.1.5")
     implementation("org.tensorflow:tensorflow-lite-support:0.3.1")
-    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.5.0-beta01")
-    implementation("androidx.activity:activity-ktx:1.4.0") // ActivityResultLauncher + viewModels
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.5.0-rc02")
+    implementation("androidx.activity:activity-ktx:1.4.0")
     implementation("androidx.recyclerview:recyclerview:1.2.1")
 }

@@ -75,8 +75,6 @@ open class Rest {
         //val page_size: Double,
     ) : Rest()
 
-    open class GraphQLResponse(val data: GraphQL) : Rest()
-
     class Friendships(val friendship_statuses: Map<String, Friendship>) : Rest()
 
     class Friendship(

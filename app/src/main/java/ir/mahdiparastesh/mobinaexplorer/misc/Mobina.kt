@@ -31,9 +31,11 @@ class Mobina(private val c: Context) {
 
     val twelfth = photo(12)
 
+    val thirteenth = photo(13)
+
     private fun photo(n: Int): Bitmap {
         var data: ByteArray
-        c.resources.assets.open("mobina/$n.jfif").apply {
+        c.resources.assets.open("mobina/$n.jpg").apply {
             data = readBytes()
             close()
         }

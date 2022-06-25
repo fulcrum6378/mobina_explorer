@@ -105,7 +105,7 @@ class Explorer : Service() {
 
         fun pi(c: Context, code: Code): PendingIntent = PendingIntent.getService(
             c, 0, Intent(c, Explorer::class.java).apply { action = code.s },
-            PendingIntent.FLAG_CANCEL_CURRENT
+            PendingIntent.FLAG_IMMUTABLE
         )
     }
 

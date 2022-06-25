@@ -16,16 +16,12 @@ open class Delayer(
             synchronized(this@Delayer) {
                 if (mStopTimeInFuture - SystemClock.elapsedRealtime() <= 0)
                     listener()
-                else sendMessageDelayed(obtainMessage(MSG), timeout)
+                else sendMessageDelayed(obtainMessage(1), timeout)
             }
         }
     }
 
     init {
-        mHandler.sendMessage(mHandler.obtainMessage(MSG))
-    }
-
-    companion object {
-        private const val MSG = 1
+        mHandler.sendMessage(mHandler.obtainMessage(1))
     }
 }

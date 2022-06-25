@@ -2,6 +2,8 @@ package ir.mahdiparastesh.mobinaexplorer.misc
 
 import android.app.Activity.RESULT_OK
 import android.content.Intent
+import android.icu.text.SimpleDateFormat
+import android.icu.util.GregorianCalendar
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
@@ -10,6 +12,7 @@ import ir.mahdiparastesh.mobinaexplorer.R
 import ir.mahdiparastesh.mobinaexplorer.room.Database.DbFile
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.util.*
 
 class Exporter(c: ComponentActivity) {
     private var launcher: ActivityResultLauncher<Intent> =
@@ -39,7 +42,12 @@ class Exporter(c: ComponentActivity) {
         launcher.launch(Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "application/x-sqlite3"
-            putExtra(Intent.EXTRA_TITLE, "Mobina Explorer.db")
+            putExtra(
+                Intent.EXTRA_TITLE,
+                "Mobina Explorer - ${
+                    SimpleDateFormat("yyyy.MM.dd - HH-mm", Locale.UK).format(GregorianCalendar())
+                }.db"
+            )
         })
     }
 }

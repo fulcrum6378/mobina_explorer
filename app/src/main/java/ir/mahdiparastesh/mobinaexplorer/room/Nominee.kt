@@ -10,8 +10,8 @@ import ir.mahdiparastesh.mobinaexplorer.Crawler.Companion.MIN_DISTANCE
 
 @Entity
 class Nominee(
-    @PrimaryKey(autoGenerate = false) var id: Long,
-   var user: String,
+    @PrimaryKey var id: Long,
+    var user: String,
     var name: String,
     var accs: Boolean, // Is their profile accessible (!pv or followed)?
     var step: Byte,

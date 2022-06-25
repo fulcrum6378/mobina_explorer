@@ -7,7 +7,7 @@ import androidx.room.Database
 import ir.mahdiparastesh.mobinaexplorer.Explorer
 import java.io.File
 
-@Database(version = 2, entities = [Nominee::class, Candidate::class, Session::class])
+@Database(version = 1, entities = [Nominee::class, Candidate::class, Session::class])
 abstract class Database : RoomDatabase() {
     abstract fun dao(): DAO
 
@@ -93,7 +93,7 @@ abstract class Database : RoomDatabase() {
                         db.execSQL("ALTER TABLE Candidate ADD COLUMN added INTEGER NOT NULL DEFAULT 0")
                         db.execSQL("ALTER TABLE Candidate ADD COLUMN obscure INTEGER NOT NULL DEFAULT 0")
                     }
-                })*/ // THIS WAS A MANUAL MIGRATION!!
+                })*/
             }.build()
         }
 

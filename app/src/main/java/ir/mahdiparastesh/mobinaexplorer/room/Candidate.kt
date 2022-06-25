@@ -7,7 +7,7 @@ import ir.mahdiparastesh.mobinaexplorer.Crawler
 
 @Entity
 class Candidate(
-    @PrimaryKey(autoGenerate = false) var id: Long,
+    @PrimaryKey var id: Long,
     var score: Float,
     var scope: String,
     var added: Long,

@@ -41,7 +41,7 @@ class UiWork(
             Action.REPAIR -> (input as Nominee).apply {
                 async = true
                 Fetcher(
-                    c, Fetcher.Type.INFO.url.format(id), Fetcher.Listener(Panel.handler) { info ->
+                    c, Fetcher.Endpoint.INFO.url.format(id), Fetcher.Listener(Panel.handler) { info ->
                         val newU =
                             Gson().fromJson(Fetcher.decode(info), Rest.ProfileInfo::class.java).user
                         user = newU.username
