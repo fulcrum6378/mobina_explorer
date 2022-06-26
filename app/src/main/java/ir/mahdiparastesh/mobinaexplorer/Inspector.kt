@@ -85,53 +85,54 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
             shallFetch = false
         }
 
-        if (shallFetch) Fetcher(c, Endpoint.PROFILE.url.format(nom.user), Fetcher.Listener { baPro ->
-            if (!c.crawler.running) return@Listener
-            val profile = Fetcher.decode(baPro)
+        if (shallFetch) Fetcher(
+            c, Endpoint.PROFILE.url.format(nom.user), Fetcher.Listener { baPro ->
+                if (!c.crawler.running) return@Listener
+                val profile = Fetcher.decode(baPro)
 
-            try {
-                u = Gson().fromJson(profile, GraphQl::class.java).data.user!!
-                if (nom.accs && (u.is_private == true || u.blocked_by_viewer == true
-                            || u.has_blocked_viewer == true)
-                ) dao.updateNominee(nom.apply { accs = false })
-                unknownError = 0
-            } catch (e: Exception) { // JsonSyntaxException or NullPointerException
-                invalidResult()
-                return@Listener
-            }
-            timeline = u.edge_owner_to_timeline_media!!
-
-            if (nom.name != u.full_name) {
                 try {
-                    nom.name = u.full_name
-                } catch (e: NullPointerException) {
-                    throw Exception(Gson().toJson(u))
+                    u = Gson().fromJson(profile, GraphQl::class.java).data.user!!
+                    if (nom.accs && (u.is_private == true || u.blocked_by_viewer == true
+                                || u.has_blocked_viewer == true)
+                    ) dao.updateNominee(nom.apply { accs = false })
+                    unknownError = 0
+                } catch (e: Exception) { // JsonSyntaxException or NullPointerException
+                    invalidResult()
+                    return@Listener
                 }
-                dao.updateNominee(nom)
-                scopes.removeLast()
-                scopes.add(nom.name)
-            }
-            scopes.add(u.biography)
-            if (searchScopes(proximity, *scopes.toTypedArray())) revertProximity()
-            if (searchScopes(keywords, *scopes.toTypedArray()))
-                qualified = Qualification(null, Candidate.IN_PROFILE_TEXT)
-            else {
-                handler.obtainMessage(handler.ANALYZED).sendToTarget()
-                return@Listener
-            }
-            Delayer(l) {
-                if (!c.crawler.running) return@Delayer
-                c.crawler.signal(Signal.PROFILE_PHOTO, nom.user)
-                Fetcher(c, u.profile_pic_url_hd ?: u.profile_pic_url, Fetcher.Listener { img ->
-                    if (c.crawler.running) c.analyzer.Subject(img) { res ->
-                        if (!res.isNullOrEmpty() && res.anyQualified()) {
-                            qualified = Qualification(res, Candidate.IN_PROFILE)
-                            handler.obtainMessage(handler.ANALYZED).sendToTarget()
-                        } else fetchPosts(timeline.edges)
+                timeline = u.edge_owner_to_timeline_media!!
+
+                if (nom.name != u.full_name) {
+                    try {
+                        nom.name = u.full_name
+                    } catch (e: NullPointerException) {
+                        throw Exception(Gson().toJson(u))
                     }
-                })
-            }
-        })
+                    dao.updateNominee(nom)
+                    scopes.removeLast()
+                    scopes.add(nom.name)
+                }
+                scopes.add(u.biography)
+                if (searchScopes(proximity, *scopes.toTypedArray())) revertProximity()
+                if (searchScopes(keywords, *scopes.toTypedArray()))
+                    qualified = Qualification(null, Candidate.IN_PROFILE_TEXT)
+                else {
+                    handler.obtainMessage(handler.ANALYZED).sendToTarget()
+                    return@Listener
+                }
+                Delayer(l) {
+                    if (!c.crawler.running) return@Delayer
+                    c.crawler.signal(Signal.PROFILE_PHOTO, nom.user)
+                    Fetcher(c, u.profile_pic_url_hd ?: u.profile_pic_url, Fetcher.Listener { img ->
+                        if (c.crawler.running) c.analyzer.Subject(img) { res ->
+                            if (!res.isNullOrEmpty() && res.anyQualified()) {
+                                qualified = Qualification(res, Candidate.IN_PROFILE)
+                                handler.obtainMessage(handler.ANALYZED).sendToTarget()
+                            } else fetchPosts(timeline.edges)
+                        }
+                    })
+                }
+            })
     }
 
     private fun invalidResult() {
@@ -239,13 +240,15 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                     if (!c.crawler.running) return@Listener
                     addFollow(
                         json.users.toMutableList().also { numFollow += it.size },
-                        Gson().fromJson(
-                            Fetcher.decode(friendship), Rest.Friendships::class.java
-                        ).friendship_statuses
+                        Gson().fromJson(Fetcher.decode(friendship), Rest.Friendships::class.java)
+                            .friendship_statuses
                     )
 
                     if (json.next_max_id == null || numFollow >= nom.maxFollow())
-                        handler.obtainMessage(endpoint.ordinal).sendToTarget()
+                        handler.obtainMessage(
+                            if (endpoint == Endpoint.FOLLOWERS) handler.FOLLOWERS
+                            else handler.FOLLOWING
+                        ).sendToTarget()
                     else {
                         c.crawler.signal(
                             if (endpoint == Endpoint.FOLLOWERS) Signal.FOLLOWERS_W else Signal.FOLLOWING_W,

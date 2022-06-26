@@ -80,7 +80,7 @@ class Panel : ComponentActivity(), View.OnTouchListener {
                         )
                         .setPositiveButton(android.R.string.ok, null)
                         .setNeutralButton(R.string.export) { _, _ -> exporter.launch() }
-                        .create().show()
+                        .show()
                     Action.USER_LINK.ordinal -> (msg.obj as String?).apply {
                         if (this != null)
                             b.status.setOnClickListener { UiTools.openProfile(this@Panel, this) }

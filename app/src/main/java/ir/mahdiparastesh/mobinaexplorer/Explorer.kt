@@ -47,7 +47,7 @@ class Explorer : Service() {
                     NotificationManager.IMPORTANCE_LOW
                 ).apply { description = c.resources.getString(R.string.notif_channel_desc) })
         startForeground(CH_ID, NotificationCompat.Builder(c, Code.CHANNEL.s).apply {
-            setSmallIcon(R.mipmap.launcher_round)
+            setSmallIcon(R.drawable.notification)
             setContentTitle(c.resources.getString(R.string.notif_title))
             setOngoing(true)
             setProgress(0, 0, true)

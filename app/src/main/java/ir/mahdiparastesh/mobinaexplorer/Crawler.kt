@@ -215,7 +215,7 @@ class Crawler(private val c: Explorer) : Thread() {
         }
 
         fun maxFollow(prx: Byte?) = when (prx) {
-            IN_PLACE -> 20000
+            IN_PLACE -> 100000
             MIN_DISTANCE -> 5000
             MED_DISTANCE -> 2000
             MAX_DISTANCE -> 500

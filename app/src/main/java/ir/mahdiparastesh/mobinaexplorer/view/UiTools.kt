@@ -103,7 +103,7 @@ object UiTools {
     fun openProfile(c: ComponentActivity, user: String) {
         c.startActivity(
             Intent(Intent.ACTION_VIEW, Uri.parse(PROFILE.format(user)))
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            //.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
     }
 }
