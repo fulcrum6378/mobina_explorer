@@ -70,16 +70,13 @@ class Analyzer(val c: Context, val isTest: Boolean = false) {
             }.addOnFailureListener { Transit(listener, null) }
         }
 
-        private fun crop(raw: Bitmap, f: Face): Bitmap = Bitmap.createBitmap(
-            raw, if (f.boundingBox.left < 0) 0 else f.boundingBox.left,
-            if (f.boundingBox.top < 0) 0 else f.boundingBox.top,
-            if (f.boundingBox.left + f.boundingBox.width() < raw.width)
-                f.boundingBox.width()
-            else raw.width - f.boundingBox.left,
-            if (f.boundingBox.top + f.boundingBox.height() < raw.height)
-                f.boundingBox.height()
-            else raw.height - f.boundingBox.top,
-        )
+        private fun crop(raw: Bitmap, f: Face): Bitmap {
+            val left = if (f.boundingBox.left < 0) 0 else f.boundingBox.left
+            val top = if (f.boundingBox.top < 0) 0 else f.boundingBox.top
+            val right = if (f.boundingBox.right > raw.width) raw.width else f.boundingBox.right
+            val bottom = if (f.boundingBox.bottom > raw.height) raw.height else f.boundingBox.bottom
+            return Bitmap.createBitmap(raw, left, top, right - left, bottom - top)
+        }
 
         private fun compare(cropped: Bitmap): FloatArray {
             val input = arrayOf(TfUtils.tensor(cropped))

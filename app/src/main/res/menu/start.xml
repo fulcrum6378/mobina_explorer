@@ -57,14 +57,19 @@
 
         <menu>
             <item
-                android:id="@+id/smSortAlphabetically"
+                android:id="@+id/smSortByScore"
                 android:checkable="true"
                 android:checked="true"
-                android:title="@string/smSortAlphabetically" />
+                android:title="@string/smSortByScore" />
             <item
                 android:id="@+id/smSortByDate"
                 android:checkable="true"
+                android:checked="true"
                 android:title="@string/smSortByDate" />
+            <item
+                android:id="@+id/smSortByUser"
+                android:checkable="true"
+                android:title="@string/smSortByUser" />
         </menu>
     </item>
 

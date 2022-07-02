@@ -13,7 +13,7 @@ android {
         minSdk = 28
         targetSdk = 31
         versionCode = 1
-        versionName = "4.1"
+        versionName = "4.1.5"
     }
 
     compileOptions {
@@ -37,6 +37,6 @@ dependencies {
     implementation("com.google.mlkit:face-detection:16.1.5")
     implementation("org.tensorflow:tensorflow-lite-support:0.3.1")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.5.0-rc02")
-    implementation("androidx.activity:activity-ktx:1.4.0")
+    implementation("androidx.activity:activity-ktx:1.5.0")
     implementation("androidx.recyclerview:recyclerview:1.2.1")
 }

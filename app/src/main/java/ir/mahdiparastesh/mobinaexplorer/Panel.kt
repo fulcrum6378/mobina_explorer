@@ -40,7 +40,7 @@ class Panel : ComponentActivity(), View.OnTouchListener {
     class Model : ViewModel() {
         var candidature: ArrayList<Candidate>? = null
         var listWhat = 0 // 0 => Normal, 1 => Rejected, 2 => Obscure
-        var sortBy = 0 // 0 => Alphabet, 1 => Date
+        var sortBy = 1 // 0 => Score, 1 => Date, 2 => User
     }
 
     companion object {
@@ -116,8 +116,9 @@ class Panel : ComponentActivity(), View.OnTouchListener {
                         R.id.smListCan -> listWhich(0)
                         R.id.smListRej -> listWhich(1)
                         R.id.smListObc -> listWhich(2)
-                        R.id.smSortAlphabetically -> sortThemBy(0)
+                        R.id.smSortByScore -> sortThemBy(0)
                         R.id.smSortByDate -> sortThemBy(1)
+                        R.id.smSortByUser -> sortThemBy(2)
                         R.id.smOnlyPv -> {
                             Explorer.onlyPv = !item.isChecked; true; }
                         else -> false
@@ -139,8 +140,9 @@ class Panel : ComponentActivity(), View.OnTouchListener {
                 menu.findItem(R.id.smListRej).isChecked = m.listWhat == 1
                 menu.findItem(R.id.smListObc).isChecked = m.listWhat == 2
 
-                menu.findItem(R.id.smSortAlphabetically).isChecked = m.sortBy == 0
+                menu.findItem(R.id.smSortByScore).isChecked = m.sortBy == 0
                 menu.findItem(R.id.smSortByDate).isChecked = m.sortBy == 1
+                menu.findItem(R.id.smSortByUser).isChecked = m.sortBy == 2
 
                 menu.findItem(R.id.smOnlyPv).isChecked = Explorer.onlyPv
                 show()
@@ -297,11 +299,11 @@ class Panel : ComponentActivity(), View.OnTouchListener {
 
     private fun arrangeList() {
         canSum()
-        when (m.sortBy) {
-            1 -> m.candidature?.sortBy { it.added }
-            else -> m.candidature?.sortBy { it.nominee?.user }
-        }
         m.candidature?.sortByDescending { it.score }
+        when (m.sortBy) {
+            1 -> m.candidature?.sortByDescending { it.added }
+            2 -> m.candidature?.sortBy { it.nominee?.user }
+        }
         if (b.candidature.adapter == null) {
             val scr = canScroll
             b.candidature.adapter = ListUser(this@Panel)

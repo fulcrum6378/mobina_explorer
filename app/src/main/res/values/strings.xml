@@ -29,8 +29,9 @@
     <string name="smListRej">Rejected</string>
     <string name="smListObc">Obscure</string>
     <string name="smSort">Sort</string>
-    <string name="smSortAlphabetically">Sort Alphabetically</string>
+    <string name="smSortByScore">Sort By Score</string>
     <string name="smSortByDate">Sort By Date</string>
+    <string name="smSortByUser">Sort By User</string>
 
     <!-- ListUser -->
     <string name="cmInstagram">View in Instagram</string>
