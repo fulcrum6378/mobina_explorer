@@ -20,7 +20,7 @@
     <string name="smOnlyPv">Only Inaccessible</string>
     <string name="noRemPv">No remaining inaccessible profiles!</string>
     <string name="smSummary">Summary</string>
-    <string name="summary">The database has %1\$s nominees.\n%2\$s percent have been analyzed.\n%3\$s percent have been followed.</string>
+    <string name="summary">The database has %1\$s nominees.\n%2\$s%% have been analyzed.\n%3\$s%% have been followed.</string>
     <string name="export">Export</string>
     <string name="exportDone">Done!</string>
     <string name="exportUndone">Failed!</string>

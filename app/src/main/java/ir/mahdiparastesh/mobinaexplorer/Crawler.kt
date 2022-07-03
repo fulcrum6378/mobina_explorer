@@ -18,9 +18,9 @@ import ir.mahdiparastesh.mobinaexplorer.room.Session
 import java.io.InputStreamReader
 
 class Crawler(private val c: Explorer) : Thread() {
-    private lateinit var db: Database
-    private lateinit var dao: Database.DAO
-    private lateinit var session: Session
+    lateinit var db: Database
+    lateinit var dao: Database.DAO
+    private val session = Session()
     lateinit var headers: HashMap<String, String>
     lateinit var handling: HandlerThread
     private val preBytes = bytesSinceBoot()
@@ -34,7 +34,6 @@ class Crawler(private val c: Explorer) : Thread() {
 
     override fun run() {
         running = true
-        session = Session(0, now(), 0, 0L, 0L)
         handling = HandlerThread(Explorer.Code.CRW_HANDLING.s).also { it.start() }
         handler = object : Handler(handling.looper) {
             override fun handleMessage(msg: Message) {

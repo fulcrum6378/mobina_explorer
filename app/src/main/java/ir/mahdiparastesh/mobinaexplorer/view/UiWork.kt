@@ -71,7 +71,7 @@ class UiWork(
     }
 
     private fun sumCent(sum: Int, cent: Int) =
-        DecimalFormat("#.##").format((100f / sum.toFloat()) * cent.toFloat())
+        DecimalFormat("#.####").format((100f / sum.toFloat()) * cent.toFloat())
 
     fun interface CustomWork {
         fun execute(dao: Database.DAO): Any?

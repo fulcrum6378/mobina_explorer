@@ -17,16 +17,13 @@ import ir.mahdiparastesh.mobinaexplorer.json.GraphQl.*
 import ir.mahdiparastesh.mobinaexplorer.json.Rest
 import ir.mahdiparastesh.mobinaexplorer.misc.Delayer
 import ir.mahdiparastesh.mobinaexplorer.room.Candidate
-import ir.mahdiparastesh.mobinaexplorer.room.Database
 import ir.mahdiparastesh.mobinaexplorer.room.Nominee
 
 class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean = false) {
-    private val db: Database
-    private lateinit var dao: Database.DAO
     private lateinit var u: User
     private lateinit var timeline: Media
     private val allPosts = arrayListOf<EdgePost>()
-    private val l = c.crawler.handling.looper
+    private val l get() = c.crawler.handling.looper
     private var qualified: Qualification? = null
 
     private val handler = object : Handler(l) {
@@ -34,7 +31,6 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         val FOLLOWERS = 1
         val FOLLOWING = 2
 
-        @Suppress("UNCHECKED_CAST")
         override fun handleMessage(msg: Message) {
             when (msg.what) {
                 ANALYZED -> {
@@ -45,7 +41,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                         )
                     )
                     if (newlyQualified) c.crawler.signal(Signal.QUALIFIED, nom.user)
-                    if (!nom.anal) dao.updateNominee(nom.analyzed())
+                    if (!nom.anal) c.crawler.dao.updateNominee(nom.analyzed())
                     val doNotWait = msg.obj == false
                     if (nom.accs && nom.proximity() != null && !nom.fllw) {
                         if (Explorer.strategy == Explorer.STRATEGY_COLLECT) {
@@ -63,7 +59,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
         }
 
         private fun bye(done: Boolean = true, signal: Boolean = true, wait: Boolean = true) {
-            if (done) dao.updateNominee(nom.followed())
+            if (done) c.crawler.dao.updateNominee(nom.followed())
             if (signal) c.crawler.signal(Signal.RESTING, nom.user)
             if (wait) Delayer(l) { Delayer(l) { c.crawler.carryOn() } }
             else c.crawler.carryOn()
@@ -72,7 +68,6 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
 
     init {
         c.crawler.signal(Signal.INSPECTING, nom.user)
-        db = Database.DbFile.build(c).also { dao = it.dao() }
         var shallFetch = true
 
         val scopes = arrayListOf<String?>(nom.user, nom.name)
@@ -94,7 +89,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                     u = Gson().fromJson(profile, GraphQl::class.java).data.user!!
                     if (nom.accs && (u.is_private == true || u.blocked_by_viewer == true
                                 || u.has_blocked_viewer == true)
-                    ) dao.updateNominee(nom.apply { accs = false })
+                    ) c.crawler.dao.updateNominee(nom.apply { accs = false })
                     unknownError = 0
                 } catch (e: Exception) { // JsonSyntaxException or NullPointerException
                     invalidResult()
@@ -108,7 +103,7 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
                     } catch (e: NullPointerException) {
                         throw Exception(Gson().toJson(u))
                     }
-                    dao.updateNominee(nom)
+                    c.crawler.dao.updateNominee(nom)
                     scopes.removeLast()
                     scopes.add(nom.name)
                 }
@@ -286,11 +281,10 @@ class Inspector(private val c: Explorer, val nom: Nominee, forceAnalyze: Boolean
 
     private fun revertProximity() {
         nom.step = 0
-        dao.updateNominee(nom)
+        c.crawler.dao.updateNominee(nom)
     }
 
     fun close() {
-        db.close()
     }
 
     companion object {

@@ -12,7 +12,7 @@ import androidx.core.app.NotificationCompat
 import androidx.lifecycle.MutableLiveData
 
 class Explorer : Service() {
-    lateinit var c: Context
+    val c: Context get() = applicationContext
     private var wakeLock: PowerManager.WakeLock? = null
     lateinit var analyzer: Analyzer
     lateinit var crawler: Crawler
@@ -29,7 +29,6 @@ class Explorer : Service() {
     override fun onCreate() {
         state.value = State.CHANGING
         super.onCreate()
-        c = applicationContext
 
         // In order for the service to be able to persist in when the activities are destroyed:
         // Go to app settings -> battery -> allow background activity and also...

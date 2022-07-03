@@ -18,7 +18,6 @@ class Exporter(c: ComponentActivity) {
     private var launcher: ActivityResultLauncher<Intent> =
         c.registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
             if (it.resultCode != RESULT_OK) return@registerForActivityResult
-            // TODO: THIS EXPORT SUCKS, BUT SOMETIMES
             val bExp = try {
                 c.contentResolver.openFileDescriptor(it.data!!.data!!, "w")?.use { des ->
                     var db: ByteArray?
